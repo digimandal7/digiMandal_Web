@@ -1,0 +1,166 @@
+{
+  "info": {
+    "name": "DigiMandal - Onboarding API",
+    "description": "Onboarding, OTP, profile, interests, preferred locations and invitation requests. Set EXPOSE_OTP=true outside production for local automatic OTP capture.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Send OTP - Login or Register",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{mobile}}\"\n}" },
+            "url": "{{base_url}}/auth/send-otp"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('OTP sent', () => pm.response.to.have.success);", "const json = pm.response.json();", "if (json.otp) pm.collectionVariables.set('otp', json.otp);"] } }]
+        },
+        {
+          "name": "Resend OTP",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{mobile}}\"\n}" },
+            "url": "{{base_url}}/auth/resend-otp"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.otp) pm.collectionVariables.set('otp', json.otp);"] } }]
+        },
+        {
+          "name": "Verify OTP",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{mobile}}\",\n  \"otp\": \"{{otp}}\"\n}" },
+            "url": "{{base_url}}/auth/verify-otp"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('OTP verified', () => pm.response.to.have.success);", "const json = pm.response.json();", "if (json.token) pm.collectionVariables.set('token', json.token);"] } }]
+        },
+        {
+          "name": "Check Registration Status",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{mobile}}\"\n}" },
+            "url": "{{base_url}}/auth/check-status"
+          }
+        },
+        {
+          "name": "Password Login - Optional Legacy Flow",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{mobile}}\",\n  \"password\": \"Password@123\"\n}" },
+            "url": "{{base_url}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.token) pm.collectionVariables.set('token', json.token);"] } }]
+        },
+        {
+          "name": "Verify Token",
+          "request": { "method": "GET", "url": "{{base_url}}/auth/verify-token" }
+        }
+      ]
+    },
+    {
+      "name": "Profile and Interests",
+      "item": [
+        {
+          "name": "Get Interests",
+          "auth": { "type": "noauth" },
+          "request": { "method": "GET", "url": "{{base_url}}/interests" }
+        },
+        {
+          "name": "Create Interest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Festivals\",\n  \"description\": \"Local festivals\",\n  \"icon\": \"festival\"\n}" },
+            "url": "{{base_url}}/interests"
+          }
+        },
+        {
+          "name": "Complete Registration",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Yogesh Sharma\",\n  \"email\": \"yogesh@example.com\",\n  \"password\": \"Password@123\",\n  \"confirmPassword\": \"Password@123\",\n  \"preferredLanguage\": \"en\",\n  \"interests\": [1, 2, 3]\n}" },
+            "url": "{{base_url}}/auth/complete-registration"
+          }
+        },
+        {
+          "name": "Update Profile, Language and Interests",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Yogesh Sharma\",\n  \"preferredLanguage\": \"hi\",\n  \"interests\": [1, 2, 3]\n}" },
+            "url": "{{base_url}}/auth/profile"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": { "method": "GET", "url": "{{base_url}}/auth/me" }
+        }
+      ]
+    },
+    {
+      "name": "Preferred Locations",
+      "item": [
+        { "name": "List Locations", "request": { "method": "GET", "url": "{{base_url}}/locations" } },
+        {
+          "name": "Add Location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Vasant Vihar\",\n  \"formattedAddress\": \"Vasant Vihar, Thane West, Maharashtra\",\n  \"placeId\": \"sample-place-id\",\n  \"latitude\": 19.2183,\n  \"longitude\": 72.9781\n}" },
+            "url": "{{base_url}}/locations"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data?.id) pm.collectionVariables.set('location_id', json.data.id);"] } }]
+        },
+        {
+          "name": "Reorder Locations",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"locationIds\": [{{location_id}}]\n}" },
+            "url": "{{base_url}}/locations/reorder"
+          }
+        },
+        { "name": "Delete Location", "request": { "method": "DELETE", "url": "{{base_url}}/locations/{{location_id}}" } }
+      ]
+    },
+    {
+      "name": "Invitation Fix Verification",
+      "item": [
+        {
+          "name": "Send Invitation With Role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile\": \"{{invite_mobile}}\",\n  \"role\": \"Member\"\n}" },
+            "url": "{{base_url}}/invitation/{{mandal_id}}/send"
+          }
+        },
+        { "name": "My Pending Invitations", "request": { "method": "GET", "url": "{{base_url}}/invitation/my/pending" } },
+        { "name": "Accept Invitation", "request": { "method": "POST", "url": "{{base_url}}/invitation/{{invitation_id}}/accept" } }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/api" },
+    { "key": "mobile", "value": "9876543210" },
+    { "key": "otp", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "location_id", "value": "1" },
+    { "key": "mandal_id", "value": "1" },
+    { "key": "invite_mobile", "value": "9876543211" },
+    { "key": "invitation_id", "value": "1" }
+  ]
+}
