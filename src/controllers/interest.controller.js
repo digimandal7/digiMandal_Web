@@ -4,7 +4,7 @@ const prisma = require("../config/prisma");
 exports.getAllInterests = async (req, res, next) => {
   try {
     const interests = await prisma.interest.findMany({
-      orderBy: { name: "asc" },
+      orderBy: { id: "asc" },
     });
 
     res.json({

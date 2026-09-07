@@ -20,7 +20,18 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  // Shared across send/resend/verify — keep generous for local testing.
+  limit: process.env.NODE_ENV === "production" ? 30 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    code: "RATE_LIMITED",
+    message: "Too many OTP requests. Please try again later.",
+  },
+});
 app.use("/api/auth/send-otp", otpLimiter);
 app.use("/api/auth/resend-otp", otpLimiter);
 app.use("/api/auth/verify-otp", otpLimiter);
