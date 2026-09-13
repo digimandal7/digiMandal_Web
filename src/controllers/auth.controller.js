@@ -126,16 +126,72 @@ exports.verifyOtp = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { mobile, password } = req.body;
+    const { mobile, password, fullName, name } = req.body;
     validateMobile(mobile);
     if (!password) throw apiError(400, "PASSWORD_REQUIRED", "Password is required");
-    const user = await prisma.user.findUnique({ where: { mobile } });
-    if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
+
+    const displayName = String(fullName || name || "").trim();
+    let user = await prisma.user.findUnique({ where: { mobile } });
+    if (!user) {
+      throw apiError(404, "USER_NOT_FOUND", "User not found. Please verify OTP first");
+    }
+    if (user.blockedUntil && user.blockedUntil > new Date()) {
+      throw apiError(423, "ACCOUNT_BLOCKED", "Account is temporarily blocked", {
+        blockedUntil: user.blockedUntil,
+      });
+    }
+
+    // Build Profile / incomplete registration: save fullName + password (mobile from OTP flow)
+    if (!user.profileComplete) {
+      if (!displayName) throw apiError(400, "NAME_REQUIRED", "Full name is required");
+      if (password.length < 8) {
+        throw apiError(400, "WEAK_PASSWORD", "Password must contain at least 8 characters");
+      }
+
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: displayName,
+          password: await bcrypt.hash(password, 12),
+          isVerified: true,
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: "Profile credentials saved successfully",
+        token: signToken(user),
+        flowType: "REGISTRATION",
+        user: {
+          id: user.id,
+          mobile: user.mobile,
+          name: user.name,
+          email: user.email,
+          profileComplete: user.profileComplete,
+        },
+      });
+    }
+
+    if (!(await bcrypt.compare(password, user.password))) {
       throw apiError(401, "INVALID_CREDENTIALS", "Invalid mobile number or password");
     }
-    if (user.blockedUntil && user.blockedUntil > new Date()) throw apiError(423, "ACCOUNT_BLOCKED", "Account is temporarily blocked", { blockedUntil: user.blockedUntil });
-    res.json({ success: true, message: "Login successful", token: signToken(user), flowType: "LOGIN", user: { id: user.id, mobile: user.mobile, name: user.name, email: user.email, profileComplete: user.profileComplete } });
-  } catch (error) { next(error); }
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      token: signToken(user),
+      flowType: "LOGIN",
+      user: {
+        id: user.id,
+        mobile: user.mobile,
+        name: user.name,
+        email: user.email,
+        profileComplete: user.profileComplete,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 async function validateInterests(interests) {

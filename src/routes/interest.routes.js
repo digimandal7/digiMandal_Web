@@ -8,4 +8,4 @@ router.get("/", controller.getAllInterests);
 // Admin route - Create interest
 router.post("/", auth, controller.createInterest);
 
-module.exports = router;
+module.exports = router; 
