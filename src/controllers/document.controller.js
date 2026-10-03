@@ -1,5 +1,7 @@
 const prisma = require("../config/prisma");
 const imagekit = require("../config/imagekit");
+const { DOCUMENT_TYPES } = require("../config/mandal-options");
+const { requireMandalPermission } = require("../services/mandal-access.service");
 
 /* ==================== UPLOAD DOCUMENT ==================== */
 exports.uploadDocument = async (req, res, next) => {
@@ -8,8 +10,9 @@ exports.uploadDocument = async (req, res, next) => {
     const file = req.file;
 
     if (!mandalId || !type || !file) {
-      throw { status: 400, message: "mandalId, type and file are required" };
+      throw { status: 400, code: "DOCUMENT_FIELDS_REQUIRED", message: "mandalId, type and file are required" };
     }
+    if (!DOCUMENT_TYPES.includes(type)) throw { status: 400, code: "INVALID_DOCUMENT_TYPE", message: `Document type must be one of: ${DOCUMENT_TYPES.join(", ")}` };
 
     const mandalId_num = Number(mandalId);
     const mandal = await prisma.mandal.findUnique({
@@ -18,29 +21,33 @@ exports.uploadDocument = async (req, res, next) => {
 
     if (!mandal) throw { status: 404, message: "Mandal not found" };
 
-    if (mandal.createdById !== req.user.userId) {
-      throw { status: 403, message: "Not authorized" };
+    await requireMandalPermission(mandalId_num, req.user.userId, "MANAGE_DOCUMENTS");
+    if (["REGISTRATION_CERTIFICATE", "80G_CERTIFICATE"].includes(type) && !mandal.isRegistered) throw { status: 400, code: "REGISTRATION_DOCUMENT_NOT_APPLICABLE", message: "Registration documents apply only to registered Mandals" };
+    if (type === "CANCELLED_CHEQUE") {
+      const bank = await prisma.mandalBank.findUnique({ where: { mandalId: mandalId_num } });
+      if (!bank) throw { status: 400, code: "BANK_DETAILS_REQUIRED", message: "Add bank details before uploading a cancelled cheque" };
     }
+
+    const existing = await prisma.mandalDocument.findFirst({ where: { mandalId: mandalId_num, type } });
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     const uploadResponse = await imagekit.upload({
       file: file.buffer,
-      fileName: `${Date.now()}-${file.originalname}`,
+      fileName: `${Date.now()}-${safeName}`,
       folder: `/digimandal/${mandalId_num}`,
       useUniqueFileName: true,
     });
 
-    const document = await prisma.mandalDocument.create({
-      data: {
-        mandalId: mandalId_num,
-        type,
-        fileUrl: uploadResponse.url,
-        fileId: uploadResponse.fileId,
-      },
-    });
+    const document = existing
+      ? await prisma.mandalDocument.update({ where: { id: existing.id }, data: { fileUrl: uploadResponse.url, fileId: uploadResponse.fileId } })
+      : await prisma.mandalDocument.create({ data: { mandalId: mandalId_num, type, fileUrl: uploadResponse.url, fileId: uploadResponse.fileId } });
+    if (existing) {
+      try { await imagekit.deleteFile(existing.fileId); } catch (error) { console.error("Old ImageKit document cleanup failed:", error.message); }
+    }
 
     res.status(201).json({
       success: true,
-      message: "Document uploaded successfully",
+      message: existing ? "Document replaced successfully" : "Document uploaded successfully",
       data: document,
     });
   } catch (error) {
@@ -63,14 +70,7 @@ exports.getDocuments = async (req, res, next) => {
 
     if (!mandal) throw { status: 404, message: "Mandal not found" };
 
-    // Allow mandal owner and members to view documents
-    const isMember = await prisma.mandalMember.findFirst({
-      where: { mandalId, userId: req.user.userId },
-    });
-
-    if (mandal.createdById !== req.user.userId && !isMember) {
-      throw { status: 403, message: "Not authorized" };
-    }
+    await requireMandalPermission(mandalId, req.user.userId, "VIEW_DOCUMENTS");
 
     const documents = await prisma.mandalDocument.findMany({
       where: { mandalId },
@@ -99,13 +99,7 @@ exports.getDocumentDetails = async (req, res, next) => {
 
     if (!document) throw { status: 404, message: "Document not found" };
 
-    const isMember = await prisma.mandalMember.findFirst({
-      where: { mandalId: document.mandalId, userId: req.user.userId },
-    });
-
-    if (document.mandal.createdById !== req.user.userId && !isMember) {
-      throw { status: 403, message: "Not authorized" };
-    }
+    await requireMandalPermission(document.mandalId, req.user.userId, "VIEW_DOCUMENTS");
 
     res.json({ success: true, data: document });
   } catch (error) {
@@ -127,9 +121,7 @@ exports.deleteDocument = async (req, res, next) => {
 
     if (!document) throw { status: 404, message: "Document not found" };
 
-    if (document.mandal.createdById !== req.user.userId) {
-      throw { status: 403, message: "Not authorized" };
-    }
+    await requireMandalPermission(document.mandalId, req.user.userId, "MANAGE_DOCUMENTS");
 
     // Delete from ImageKit
     try {

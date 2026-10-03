@@ -1,12 +1,13 @@
 const prisma = require("../config/prisma");
+const { requireMandalPermission, hasMandalPermission } = require("../services/mandal-access.service");
 
 /* ==================== ADD MEMBER (via invitation acceptance) ==================== */
 exports.addMember = async (req, res, next) => {
   try {
-    const { mandalId, userId, role } = req.body;
+    const { mandalId, userId, role = "Member", roleId } = req.body;
 
-    if (!mandalId || !userId || !role) {
-      throw { status: 400, message: "mandalId, userId, and role required" };
+    if (!mandalId || !userId) {
+      throw { status: 400, message: "mandalId and userId are required" };
     }
 
     const mandal = await prisma.mandal.findUnique({
@@ -15,9 +16,12 @@ exports.addMember = async (req, res, next) => {
 
     if (!mandal) throw { status: 404, message: "Mandal not found" };
 
-    if (mandal.createdById !== req.user.userId) {
-      throw { status: 403, message: "Not authorized to add members" };
-    }
+    const access = await requireMandalPermission(Number(mandalId), req.user.userId, "MANAGE_MEMBERS");
+    const selectedRole = roleId
+      ? await prisma.mandalRole.findUnique({ where: { id: Number(roleId) } })
+      : await prisma.mandalRole.findUnique({ where: { mandalId_name: { mandalId: Number(mandalId), name: role } } });
+    if (!selectedRole || selectedRole.mandalId !== Number(mandalId)) throw { status: 400, code: "INVALID_MANDAL_ROLE", message: "Select a valid Mandal role" };
+    if ((selectedRole.permissions.includes("*") || selectedRole.permissions.includes("MANAGE_ROLES")) && !hasMandalPermission(access, "MANAGE_ROLES")) throw { status: 403, code: "CANNOT_GRANT_PRIVILEGED_ROLE", message: "Only a Mandal Admin can grant this role" };
 
     // Validate user exists
     const user = await prisma.user.findUnique({
@@ -39,7 +43,8 @@ exports.addMember = async (req, res, next) => {
       data: {
         mandalId: Number(mandalId),
         userId: Number(userId),
-        role,
+        role: selectedRole.name,
+        roleId: selectedRole.id,
         mobile: user.mobile,
       },
       include: { user: { select: { id: true, mobile: true } } },
@@ -66,14 +71,11 @@ exports.getMembers = async (req, res, next) => {
 
     if (!mandal) throw { status: 404, message: "Mandal not found" };
 
-    const requesterMembership = await prisma.mandalMember.findFirst({ where: { mandalId, userId: req.user.userId } });
-    if (mandal.createdById !== req.user.userId && !requesterMembership) {
-      throw { status: 403, code: "FORBIDDEN", message: "Not authorized to view members" };
-    }
+    await requireMandalPermission(mandalId, req.user.userId, "VIEW_MEMBERS");
 
     const members = await prisma.mandalMember.findMany({
       where: { mandalId },
-      include: { user: { select: { id: true, mobile: true } } },
+      include: { user: { select: { id: true, mobile: true, name: true } }, roleRef: true },
       orderBy: { joinedAt: "asc" },
     });
 
@@ -102,10 +104,7 @@ exports.getMemberDetails = async (req, res, next) => {
 
     if (!member) throw { status: 404, message: "Member not found" };
 
-    const requesterMembership = await prisma.mandalMember.findFirst({ where: { mandalId: member.mandalId, userId: req.user.userId } });
-    if (member.mandal.createdById !== req.user.userId && !requesterMembership) {
-      throw { status: 403, code: "FORBIDDEN", message: "Not authorized to view this member" };
-    }
+    await requireMandalPermission(member.mandalId, req.user.userId, "VIEW_MEMBERS");
 
     res.json({ success: true, data: member });
   } catch (error) {
@@ -117,9 +116,9 @@ exports.getMemberDetails = async (req, res, next) => {
 exports.updateMemberRole = async (req, res, next) => {
   try {
     const memberId = Number(req.params.id);
-    const { role } = req.body;
+    const { role, roleId } = req.body;
 
-    if (!role) throw { status: 400, message: "Role required" };
+    if (!role && !roleId) throw { status: 400, message: "roleId or role is required" };
 
     const member = await prisma.mandalMember.findUnique({
       where: { id: memberId },
@@ -128,14 +127,18 @@ exports.updateMemberRole = async (req, res, next) => {
 
     if (!member) throw { status: 404, message: "Member not found" };
 
-    if (member.mandal.createdById !== req.user.userId) {
-      throw { status: 403, message: "Not authorized" };
-    }
+    const access = await requireMandalPermission(member.mandalId, req.user.userId, "MANAGE_MEMBERS");
+    const selectedRole = roleId
+      ? await prisma.mandalRole.findUnique({ where: { id: Number(roleId) } })
+      : await prisma.mandalRole.findUnique({ where: { mandalId_name: { mandalId: member.mandalId, name: role } } });
+    if (!selectedRole || selectedRole.mandalId !== member.mandalId) throw { status: 400, code: "INVALID_MANDAL_ROLE", message: "Select a valid Mandal role" };
+    if ((selectedRole.permissions.includes("*") || selectedRole.permissions.includes("MANAGE_ROLES")) && !hasMandalPermission(access, "MANAGE_ROLES")) throw { status: 403, code: "CANNOT_GRANT_PRIVILEGED_ROLE", message: "Only a Mandal Admin can grant this role" };
+    if (member.userId === member.mandal.createdById && selectedRole.name !== "Admin") throw { status: 400, code: "CREATOR_MUST_BE_ADMIN", message: "The Mandal creator must remain an Admin" };
 
     const updated = await prisma.mandalMember.update({
       where: { id: memberId },
-      data: { role },
-      include: { user: { select: { id: true, mobile: true } } },
+      data: { role: selectedRole.name, roleId: selectedRole.id },
+      include: { user: { select: { id: true, mobile: true } }, roleRef: true },
     });
 
     res.json({ success: true, data: updated });
@@ -156,9 +159,8 @@ exports.deleteMember = async (req, res, next) => {
 
     if (!member) throw { status: 404, message: "Member not found" };
 
-    if (member.mandal.createdById !== req.user.userId) {
-      throw { status: 403, message: "Not authorized" };
-    }
+    await requireMandalPermission(member.mandalId, req.user.userId, "MANAGE_MEMBERS");
+    if (member.userId === member.mandal.createdById) throw { status: 400, code: "CANNOT_REMOVE_CREATOR", message: "The Mandal creator cannot be removed" };
 
     await prisma.mandalMember.delete({ where: { id: memberId } });
 

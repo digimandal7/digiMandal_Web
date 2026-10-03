@@ -4,6 +4,7 @@ const { auth } = require("../middlewares/auth.middleware");
 
 // Send invitation to users
 router.post("/:mandalId/send", auth, controller.sendInvitation);
+router.post("/:mandalId/bulk", auth, controller.sendBulkInvitations);
 
 // Get invitations for a mandal (owner only)
 router.get("/:mandalId/list", auth, controller.getInvitationsForMandal);

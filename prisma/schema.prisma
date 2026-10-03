@@ -13,7 +13,10 @@ datasource db {
 enum MandalStatus {
   DRAFT
   INVITED
+  INVITATIONS_SENT
+  PENDING_APPROVAL
   ACTIVE
+  REJECTED
 }
 
 enum InvitationStatus {
@@ -72,14 +75,19 @@ model UserPreferredLocation {
 }
 
 model Mandal {
-  id            Int          @id @default(autoincrement())
-  name          String       @db.VarChar(255)
-  category      String       @db.VarChar(100)
-  size          String       @default("Medium") @db.VarChar(50)
-  formationYear Int          @default(2025)
-  isPrivate     Boolean      @default(false)
-  status        MandalStatus @default(DRAFT)
-  description   String?      @db.Text
+  id                 Int          @id @default(autoincrement())
+  name               String       @db.VarChar(255)
+  category           String       @db.VarChar(100)
+  size               String       @default("Medium") @db.VarChar(50)
+  formationYear      Int          @default(2025)
+  isPrivate          Boolean      @default(false)
+  isRegistered       Boolean      @default(false)
+  onboardingStep     Int          @default(1)
+  bankDetailsSkipped Boolean      @default(false)
+  status             MandalStatus @default(DRAFT)
+  description        String?      @db.Text
+  finalizedAt        DateTime?
+  rejectionReason    String?      @db.Text
 
   createdById Int
   createdBy   User @relation("OwnerMandals", fields: [createdById], references: [id])
@@ -90,6 +98,7 @@ model Mandal {
   members      MandalMember[]
   invites      MandalInvitation[]
   documents    MandalDocument[]
+  roles        MandalRole[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -100,16 +109,36 @@ model Mandal {
   @@index([createdAt])
 }
 
+model MandalRole {
+  id          Int      @id @default(autoincrement())
+  mandalId    Int
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  permissions Json
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mandal      Mandal             @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  members     MandalMember[]
+  invitations MandalInvitation[]
+
+  @@unique([mandalId, name])
+  @@index([mandalId])
+}
+
 model MandalAddress {
-  id           Int     @id @default(autoincrement())
-  mandalId     Int     @unique
-  addressLine1 String  @db.VarChar(255)
-  addressLine2 String? @db.VarChar(255)
-  city         String  @db.VarChar(100)
-  state        String  @db.VarChar(100)
-  pincode      String  @db.VarChar(10)
-  latitude     String?
-  longitude    String?
+  id               Int     @id @default(autoincrement())
+  mandalId         Int     @unique
+  addressLine1     String  @db.VarChar(255)
+  addressLine2     String? @db.VarChar(255)
+  city             String  @db.VarChar(100)
+  state            String  @db.VarChar(100)
+  pincode          String  @db.VarChar(10)
+  latitude         String?
+  longitude        String?
+  placeId          String? @db.VarChar(255)
+  formattedAddress String? @db.Text
 
   mandal Mandal @relation(fields: [mandalId], references: [id], onDelete: Cascade)
 }
@@ -141,34 +170,42 @@ model MandalMember {
   userId   Int?
   mobile   String   @default("") @db.VarChar(10)
   role     String   @db.VarChar(100)
+  roleId   Int?
   joinedAt DateTime @default(now())
 
-  mandal Mandal @relation(fields: [mandalId], references: [id], onDelete: Cascade)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  mandal  Mandal      @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  roleRef MandalRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   @@unique([mandalId, userId])
   @@index([mandalId])
   @@index([userId])
   @@index([mobile])
+  @@index([roleId])
 }
 
 model MandalInvitation {
-  id         Int              @id @default(autoincrement())
-  mandalId   Int
-  userId     Int?
-  mobile     String           @db.VarChar(10)
-  role       String           @default("Member") @db.VarChar(100)
-  status     InvitationStatus @default(PENDING)
-  createdAt  DateTime         @default(now())
-  acceptedAt DateTime?
+  id          Int              @id @default(autoincrement())
+  mandalId    Int
+  userId      Int?
+  mobile      String           @db.VarChar(10)
+  role        String           @default("Member") @db.VarChar(100)
+  roleId      Int?
+  contactName String?          @db.VarChar(150)
+  status      InvitationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+  expiresAt   DateTime?
 
-  mandal Mandal @relation(fields: [mandalId], references: [id], onDelete: Cascade)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mandal  Mandal      @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  user    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleRef MandalRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   @@unique([mandalId, mobile])
   @@index([mandalId])
   @@index([mobile])
   @@index([status])
+  @@index([roleId])
 }
 
 model MandalDocument {

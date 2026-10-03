@@ -11,6 +11,8 @@ const memberRoutes = require("./routes/member.routes");
 const documentRoutes = require("./routes/document.routes");
 const interestRoutes = require("./routes/interest.routes");
 const locationRoutes = require("./routes/location.routes");
+const catalogRoutes = require("./routes/catalog.routes");
+const roleRoutes = require("./routes/role.routes");
 const rateLimit = require("express-rate-limit");
 const { errorHandler } = require("./middlewares/error.middleware");
 
@@ -42,6 +44,8 @@ app.use("/api/members", memberRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/interests", interestRoutes);
 app.use("/api/locations", locationRoutes);
+app.use("/api/catalog", catalogRoutes);
+app.use("/api/roles", roleRoutes);
 
 app.use(errorHandler);
 
