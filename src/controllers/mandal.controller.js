@@ -1,5 +1,5 @@
 const prisma = require("../config/prisma");
-const { MANDAL_SIZES, MANDAL_CATEGORIES, DOCUMENT_TYPES } = require("../config/mandal-options");
+const { DOCUMENT_TYPES } = require("../config/mandal-options");
 const { DEFAULT_ROLES } = require("../config/mandal-permissions");
 const { requireMandalPermission } = require("../services/mandal-access.service");
 
@@ -7,6 +7,17 @@ const apiError = (status, code, message, details) => ({ status, code, message, d
 const validPincode = (value) => /^\d{6}$/.test(value);
 const validPan = (value) => /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
 const validIfsc = (value) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
+
+async function resolveMasterOption(type, value, customValue) {
+  if (!value) throw apiError(400, `INVALID_${type}`, `Select a valid ${type.toLowerCase().replaceAll("_", " ")}`);
+  const option = await prisma.masterOption.findFirst({ where: { type, isActive: true, OR: [{ code: String(value).toUpperCase() }, { label: String(value) }] } });
+  if (!option) throw apiError(400, `INVALID_${type}`, `Select a valid ${type.toLowerCase().replaceAll("_", " ")}`);
+  if (option.isOther) {
+    if (!customValue?.trim()) throw apiError(400, `${type}_OTHER_VALUE_REQUIRED`, `Enter the other ${type.toLowerCase().replaceAll("_", " ")}`);
+    return customValue.trim();
+  }
+  return option.label;
+}
 
 async function ownedMandal(id, userId, include, permission = "EDIT_MANDAL") {
   const mandal = await prisma.mandal.findUnique({ where: { id }, include });
@@ -18,11 +29,11 @@ async function ownedMandal(id, userId, include, permission = "EDIT_MANDAL") {
 /* ==================== CREATE MANDAL ==================== */
 exports.createMandal = async (req, res, next) => {
   try {
-    const { name, category, size, formationYear, isPrivate, isRegistered } = req.body;
+    const { name, category, categoryCode, otherCategory, size, sizeCode, otherSize, formationYear, isPrivate, isRegistered } = req.body;
     const year = Number(formationYear);
     if (!name?.trim()) throw apiError(400, "MANDAL_NAME_REQUIRED", "Mandal name is required");
-    if (!MANDAL_CATEGORIES.includes(category)) throw apiError(400, "INVALID_CATEGORY", "Select a valid Mandal category");
-    if (!MANDAL_SIZES.includes(size)) throw apiError(400, "INVALID_SIZE", "Select a valid Mandal size");
+    const resolvedCategory = await resolveMasterOption("MANDAL_CATEGORY", categoryCode || category, otherCategory);
+    const resolvedSize = await resolveMasterOption("MANDAL_SIZE", sizeCode || size, otherSize);
     if (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear()) throw apiError(400, "INVALID_FORMATION_YEAR", "Select a valid formation year");
     if (typeof isPrivate !== "boolean" || typeof isRegistered !== "boolean") throw apiError(400, "MANDAL_TYPE_REQUIRED", "Mandal type and registration status are required");
 
@@ -31,7 +42,7 @@ exports.createMandal = async (req, res, next) => {
 
     const mandal = await prisma.$transaction(async (tx) => {
       const created = await tx.mandal.create({
-        data: { name: name.trim(), category, size, formationYear: year, isPrivate, isRegistered, onboardingStep: 2, status: "DRAFT", createdById: req.user.userId },
+        data: { name: name.trim(), category: resolvedCategory, size: resolvedSize, formationYear: year, isPrivate, isRegistered, onboardingStep: 2, status: "DRAFT", createdById: req.user.userId },
       });
       const roles = {};
       for (const [roleName, permissions] of Object.entries(DEFAULT_ROLES)) {
@@ -162,7 +173,7 @@ exports.getMemberMandals = async (req, res, next) => {
 exports.updateMandal = async (req, res, next) => {
   try {
     const mandalId = Number(req.params.id);
-    const { name, category, size, formationYear, isPrivate, isRegistered } = req.body;
+    const { name, category, categoryCode, otherCategory, size, sizeCode, otherSize, formationYear, isPrivate, isRegistered } = req.body;
 
     const mandal = await prisma.mandal.findUnique({ where: { id: mandalId } });
     if (!mandal) throw { status: 404, message: "Mandal not found" };
@@ -170,15 +181,15 @@ exports.updateMandal = async (req, res, next) => {
     await requireMandalPermission(mandalId, req.user.userId, "EDIT_MANDAL");
 
     if (name !== undefined && !name.trim()) throw apiError(400, "INVALID_NAME", "Mandal name cannot be empty");
-    if (category !== undefined && !MANDAL_CATEGORIES.includes(category)) throw apiError(400, "INVALID_CATEGORY", "Select a valid Mandal category");
-    if (size !== undefined && !MANDAL_SIZES.includes(size)) throw apiError(400, "INVALID_SIZE", "Select a valid Mandal size");
+    const resolvedCategory = category !== undefined || categoryCode !== undefined ? await resolveMasterOption("MANDAL_CATEGORY", categoryCode || category, otherCategory) : undefined;
+    const resolvedSize = size !== undefined || sizeCode !== undefined ? await resolveMasterOption("MANDAL_SIZE", sizeCode || size, otherSize) : undefined;
     if (formationYear !== undefined && (!Number.isInteger(Number(formationYear)) || Number(formationYear) < 1900 || Number(formationYear) > new Date().getFullYear())) throw apiError(400, "INVALID_FORMATION_YEAR", "Select a valid formation year");
     const updated = await prisma.mandal.update({
       where: { id: mandalId },
       data: {
         ...(name !== undefined && { name: name.trim() }),
-        ...(category !== undefined && { category }),
-        ...(size !== undefined && { size }),
+        ...(resolvedCategory !== undefined && { category: resolvedCategory }),
+        ...(resolvedSize !== undefined && { size: resolvedSize }),
         ...(formationYear !== undefined && { formationYear: Number(formationYear) }),
         ...(isPrivate !== undefined && { isPrivate }),
         ...(isRegistered !== undefined && { isRegistered }),
@@ -282,9 +293,10 @@ exports.addAddress = async (req, res, next) => {
 exports.addBankDetails = async (req, res, next) => {
   try {
     const mandalId = Number(req.params.id);
-    const { bankName, accountName, accountNumber, confirmAccountNumber, ifscCode } = req.body;
+    const { bankName, bankCode, otherBankName, accountName, accountNumber, confirmAccountNumber, ifscCode } = req.body;
+    const resolvedBankName = await resolveMasterOption("BANK", bankCode || bankName, otherBankName);
 
-    if (!bankName?.trim() || !accountName?.trim() || !/^\d{6,20}$/.test(accountNumber || "") || !validIfsc((ifscCode || "").toUpperCase())) throw apiError(400, "INVALID_BANK_DETAILS", "Valid bank name, account name, account number and IFSC code are required");
+    if (!accountName?.trim() || !/^\d{6,20}$/.test(accountNumber || "") || !validIfsc((ifscCode || "").toUpperCase())) throw apiError(400, "INVALID_BANK_DETAILS", "Valid bank, account name, account number and IFSC code are required");
     if (confirmAccountNumber !== accountNumber) throw apiError(400, "ACCOUNT_NUMBERS_DO_NOT_MATCH", "Account numbers do not match");
 
     const mandal = await prisma.mandal.findUnique({ where: { id: mandalId } });
@@ -297,11 +309,11 @@ exports.addBankDetails = async (req, res, next) => {
     if (bank) {
       bank = await prisma.mandalBank.update({
         where: { mandalId },
-        data: { bankName: bankName.trim(), accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
+        data: { bankName: resolvedBankName, accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
       });
     } else {
       bank = await prisma.mandalBank.create({
-        data: { mandalId, bankName: bankName.trim(), accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
+        data: { mandalId, bankName: resolvedBankName, accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
       });
     }
 

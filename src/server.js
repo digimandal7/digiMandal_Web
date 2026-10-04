@@ -15,6 +15,7 @@ const catalogRoutes = require("./routes/catalog.routes");
 const roleRoutes = require("./routes/role.routes");
 const rateLimit = require("express-rate-limit");
 const { errorHandler } = require("./middlewares/error.middleware");
+const { startBankSyncScheduler } = require("./services/bank-sync.service");
 
 const app = express();
 
@@ -67,6 +68,7 @@ const PORT = process.env.PORT || 3000;
 connectDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    startBankSyncScheduler();
   });
 });
 

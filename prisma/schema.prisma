@@ -10,6 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum MasterOptionType {
+  MANDAL_SIZE
+  MANDAL_CATEGORY
+  BANK
+}
+
 enum MandalStatus {
   DRAFT
   INVITED
@@ -43,6 +54,7 @@ model User {
   interestIds       String?   @db.Text // JSON array of interest IDs
   preferredLanguage String    @default("en") @db.VarChar(5)
   blockedUntil      DateTime?
+  platformRole      UserRole  @default(USER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -55,6 +67,22 @@ model User {
   @@index([mobile])
   @@index([email])
   @@index([createdAt])
+}
+
+model MasterOption {
+  id        Int              @id @default(autoincrement())
+  type      MasterOptionType
+  code      String           @db.VarChar(100)
+  label     String           @db.VarChar(150)
+  metadata  Json?
+  isOther   Boolean          @default(false)
+  isActive  Boolean          @default(true)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([type, code])
+  @@index([type, isActive, sortOrder])
 }
 
 model UserPreferredLocation {

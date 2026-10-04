@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "DigiMandal - Mandal Onboarding",
-    "description": "Four-step registered Mandal workflow. Run authentication first and set token. File requests require selecting local files in Postman.",
+    "description": "Registered Mandal onboarding, dropdown/lookup APIs, and role management. Run authentication first and set token. Super-admin requests require a user with platformRole SUPER_ADMIN. File requests require selecting local files in Postman.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
@@ -9,7 +9,45 @@
     {
       "name": "0 - Dropdown Data",
       "item": [
-        { "name": "Get Mandal Options", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/mandal-options" } }
+        { "name": "Get All Mandal Options", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/mandal-options" } },
+        { "name": "Get Size Options", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/options/MANDAL_SIZE" } },
+        { "name": "Get Category Options", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/options/MANDAL_CATEGORY" } },
+        { "name": "Get Bank Options", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/options/BANK" } },
+        { "name": "Lookup Pincode", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/pincode/400610" } },
+        { "name": "Lookup IFSC", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/ifsc/HDFC0000123" } },
+        { "name": "Search Bank Branches", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/catalog/bank-branches?bankcode=HDFC&city=THANE&limit=10&offset=0" } }
+      ]
+    },
+    {
+      "name": "0A - Super Admin Dropdown Management",
+      "item": [
+        {
+          "name": "Sync Banks from Razorpay Dataset",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/catalog/admin/banks/sync"
+          }
+        },
+        {
+          "name": "Add Category Option",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"RELIGIOUS\",\n  \"label\": \"Religious\",\n  \"sortOrder\": 70\n}" },
+            "url": "{{base_url}}/catalog/admin/options/MANDAL_CATEGORY"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data?.id) pm.collectionVariables.set('master_option_id', json.data.id);"] } }]
+        },
+        {
+          "name": "Update Category Option",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Religious Organization\",\n  \"sortOrder\": 70,\n  \"isActive\": true\n}" },
+            "url": "{{base_url}}/catalog/admin/options/MANDAL_CATEGORY/{{master_option_id}}"
+          }
+        },
+        { "name": "Disable Category Option", "request": { "method": "DELETE", "url": "{{base_url}}/catalog/admin/options/MANDAL_CATEGORY/{{master_option_id}}" } }
       ]
     },
     {
@@ -20,7 +58,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ekta Mandal\",\n  \"category\": \"Cultural\",\n  \"size\": \"51-200\",\n  \"formationYear\": 2020,\n  \"isPrivate\": false,\n  \"isRegistered\": true\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ekta Mandal\",\n  \"categoryCode\": \"CULTURAL\",\n  \"sizeCode\": \"51_200\",\n  \"formationYear\": 2020,\n  \"isPrivate\": false,\n  \"isRegistered\": true\n}" },
             "url": "{{base_url}}/mandal"
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test('Created', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "if (json.data?.id) pm.collectionVariables.set('mandal_id', json.data.id);"] } }]
@@ -95,7 +133,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"bankName\": \"HDFC Bank\",\n  \"accountName\": \"Ekta Mandal\",\n  \"accountNumber\": \"123456789012\",\n  \"confirmAccountNumber\": \"123456789012\",\n  \"ifscCode\": \"HDFC0000123\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"bankCode\": \"HDFC\",\n  \"accountName\": \"Ekta Mandal\",\n  \"accountNumber\": \"123456789012\",\n  \"confirmAccountNumber\": \"123456789012\",\n  \"ifscCode\": \"HDFC0000123\"\n}" },
             "url": "{{base_url}}/mandal/{{mandal_id}}/bank-details"
           }
         },
@@ -157,6 +195,7 @@
     { "key": "member_id", "value": "" },
     { "key": "manager_role_id", "value": "" },
     { "key": "member_role_id", "value": "" },
-    { "key": "custom_role_id", "value": "" }
+    { "key": "custom_role_id", "value": "" },
+    { "key": "master_option_id", "value": "" }
   ]
 }
