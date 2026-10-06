@@ -126,7 +126,7 @@ exports.verifyOtp = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { mobile, password, fullName, name } = req.body;
+    const { mobile, password, confirmPassword, fullName, name } = req.body;
     validateMobile(mobile);
     if (!password) throw apiError(400, "PASSWORD_REQUIRED", "Password is required");
 
@@ -141,11 +141,15 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Build Profile / incomplete registration: save fullName + password (mobile from OTP flow)
-    if (!user.profileComplete) {
+    // Build Profile: save full name and password. Confirm password is checked, not stored.
+    const isProfileSetup = confirmPassword !== undefined || !user.profileComplete;
+    if (isProfileSetup) {
       if (!displayName) throw apiError(400, "NAME_REQUIRED", "Full name is required");
       if (password.length < 8) {
         throw apiError(400, "WEAK_PASSWORD", "Password must contain at least 8 characters");
+      }
+      if (confirmPassword !== undefined && password !== confirmPassword) {
+        throw apiError(400, "PASSWORDS_DO_NOT_MATCH", "Passwords do not match");
       }
 
       user = await prisma.user.update({
@@ -217,14 +221,22 @@ exports.completeRegistration = async (req, res, next) => {
     const interestIds = await validateInterests(interests);
     const current = await prisma.user.findUnique({ where: { id: userId } });
     if (!current) throw apiError(404, "USER_NOT_FOUND", "User not found");
-    if (current.profileComplete) throw apiError(409, "PROFILE_ALREADY_COMPLETE", "Registration is already complete");
     if (email) {
       const duplicate = await prisma.user.findFirst({ where: { email, id: { not: userId } } });
       if (duplicate) throw apiError(409, "EMAIL_ALREADY_REGISTERED", "Email already registered");
     }
+    const data = {
+      name: name.trim(),
+      password: await bcrypt.hash(password, 12),
+      preferredLanguage,
+      interestIds: JSON.stringify(interestIds),
+      profileComplete: true,
+    };
+    if (email) data.email = email;
+    if (profileImage) data.profileImage = profileImage;
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { name: name.trim(), email: email || null, password: await bcrypt.hash(password, 12), profileImage: profileImage || null, preferredLanguage, interestIds: JSON.stringify(interestIds), profileComplete: true },
+      data,
     });
     res.json({ success: true, message: "Registration completed successfully", user: { id: user.id, mobile: user.mobile, name: user.name, email: user.email, preferredLanguage: user.preferredLanguage, interests: interestIds, profileComplete: user.profileComplete } });
   } catch (error) { next(error); }
