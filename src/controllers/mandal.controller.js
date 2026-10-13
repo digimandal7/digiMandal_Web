@@ -3,17 +3,37 @@ const prisma = require("../config/prisma");
 /* ==================== CREATE MANDAL ==================== */
 exports.createMandal = async (req, res, next) => {
   try {
-    const { name, category, size, formationYear, isPrivate } = req.body;
-    if (!name || !category)
+    const {
+      name,
+      category,
+      categoryCode,
+      size,
+      sizeCode,
+      formationYear,
+      isPrivate,
+      isRegistered,
+    } = req.body;
+
+    const resolvedCategory = categoryCode || category;
+    const resolvedSize = sizeCode || size;
+
+    if (!name || !resolvedCategory) {
       throw { status: 400, message: "Name and category required" };
+    }
+
+    const year = Number(formationYear);
+    if (!formationYear || Number.isNaN(year)) {
+      throw { status: 400, message: "Formation year required" };
+    }
 
     const mandal = await prisma.mandal.create({
       data: {
-        name,
-        category,
-        size: size || "Medium",
-        formationYear: formationYear || new Date().getFullYear(),
-        isPrivate: isPrivate || false,
+        name: String(name).trim(),
+        category: resolvedCategory,
+        size: resolvedSize || "Medium",
+        formationYear: year,
+        isPrivate: Boolean(isPrivate),
+        isRegistered: Boolean(isRegistered),
         status: "DRAFT",
         createdById: req.user.userId,
       },
@@ -195,6 +215,8 @@ exports.addAddress = async (req, res, next) => {
       pincode,
       latitude,
       longitude,
+      placeId,
+      formattedAddress,
     } = req.body;
 
     if (!addressLine1 || !city || !state || !pincode) {
@@ -221,8 +243,10 @@ exports.addAddress = async (req, res, next) => {
           city,
           state,
           pincode,
-          latitude,
-          longitude,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          placeId: placeId ?? null,
+          formattedAddress: formattedAddress ?? null,
         },
       });
     } else {
@@ -234,8 +258,10 @@ exports.addAddress = async (req, res, next) => {
           city,
           state,
           pincode,
-          latitude,
-          longitude,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          placeId: placeId ?? null,
+          formattedAddress: formattedAddress ?? null,
         },
       });
     }
@@ -247,13 +273,40 @@ exports.addAddress = async (req, res, next) => {
 };
 
 /* ==================== ADD BANK DETAILS ==================== */
+const BANK_CODE_NAMES = {
+  SBI: "State Bank of India",
+  HDFC: "HDFC Bank",
+  ICICI: "ICICI Bank",
+  AXIS: "Axis Bank",
+  BOB: "Bank of Baroda",
+  PNB: "Punjab National Bank",
+};
+
 exports.addBankDetails = async (req, res, next) => {
   try {
     const mandalId = Number(req.params.id);
-    const { bankName, accountName, accountNumber, ifscCode } = req.body;
+    const {
+      bankName,
+      bankCode,
+      accountName,
+      accountNumber,
+      confirmAccountNumber,
+      ifscCode,
+    } = req.body;
 
-    if (!bankName || !accountName || !accountNumber || !ifscCode) {
+    const resolvedBankName = bankCode
+      ? BANK_CODE_NAMES[bankCode] || bankCode
+      : bankName;
+
+    if (!resolvedBankName || !accountName || !accountNumber || !ifscCode) {
       throw { status: 400, message: "All bank details required" };
+    }
+
+    if (
+      confirmAccountNumber != null &&
+      String(confirmAccountNumber) !== String(accountNumber)
+    ) {
+      throw { status: 400, message: "Account numbers do not match" };
     }
 
     const mandal = await prisma.mandal.findUnique({ where: { id: mandalId } });
@@ -264,19 +317,48 @@ exports.addBankDetails = async (req, res, next) => {
     }
 
     let bank = await prisma.mandalBank.findUnique({ where: { mandalId } });
+    const data = {
+      bankName: resolvedBankName,
+      accountName: String(accountName).trim(),
+      accountNumber: String(accountNumber).trim(),
+      ifscCode: String(ifscCode).trim().toUpperCase(),
+    };
 
     if (bank) {
       bank = await prisma.mandalBank.update({
         where: { mandalId },
-        data: { bankName, accountName, accountNumber, ifscCode },
+        data,
       });
     } else {
       bank = await prisma.mandalBank.create({
-        data: { mandalId, bankName, accountName, accountNumber, ifscCode },
+        data: { mandalId, ...data },
       });
     }
 
-    res.json({ success: true, data: bank });
+    res.json({
+      success: true,
+      data: {
+        ...bank,
+        bankCode: bankCode || null,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.skipBankDetails = async (req, res, next) => {
+  try {
+    const mandalId = Number(req.params.id);
+    const mandal = await prisma.mandal.findUnique({ where: { id: mandalId } });
+
+    if (!mandal) throw { status: 404, message: "Mandal not found" };
+
+    if (mandal.createdById !== req.user.userId) {
+      throw { status: 403, message: "Not authorized" };
+    }
+
+    res.json({ success: true, message: "Bank details skipped" });
   } catch (e) {
     next(e);
   }
@@ -328,6 +410,57 @@ exports.addRegistration = async (req, res, next) => {
     }
 
     res.json({ success: true, data: registration });
+  } catch (e) {
+    next(e);
+  }
+};
+
+const onboardingLocation = (address) => {
+  if (!address) return "";
+  if (address.addressLine2 && address.city) {
+    return `${address.addressLine2}, ${address.city}`;
+  }
+  return [address.city, address.state].filter(Boolean).join(", ");
+};
+
+exports.getOnboardingStatus = async (req, res, next) => {
+  try {
+    const mandalId = Number(req.params.id);
+    const mandal = await prisma.mandal.findUnique({
+      where: { id: mandalId },
+      include: {
+        address: true,
+        registration: true,
+        bank: true,
+        _count: { select: { invites: true, documents: true } },
+      },
+    });
+
+    if (!mandal) throw { status: 404, message: "Mandal not found" };
+    if (mandal.createdById !== req.user.userId) {
+      throw { status: 403, message: "Not authorized" };
+    }
+
+    const steps = {
+      details: Boolean(mandal.name),
+      address: Boolean(mandal.address),
+      invitations: mandal._count.invites >= 5,
+      registration: !mandal.isRegistered || Boolean(mandal.registration),
+      documents: !mandal.isRegistered || mandal._count.documents >= 2,
+      bankDetails: Boolean(mandal.bank),
+    };
+
+    res.json({
+      success: true,
+      data: {
+        id: mandal.id,
+        name: mandal.name,
+        location: onboardingLocation(mandal.address),
+        status: mandal.status,
+        steps,
+        isComplete: Object.values(steps).every(Boolean),
+      },
+    });
   } catch (e) {
     next(e);
   }

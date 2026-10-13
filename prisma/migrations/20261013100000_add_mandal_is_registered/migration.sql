@@ -1,0 +1,2 @@
+ALTER TABLE `Mandal`
+ADD COLUMN `isRegistered` BOOLEAN NOT NULL DEFAULT false;

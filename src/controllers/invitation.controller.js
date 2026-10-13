@@ -1,5 +1,104 @@
 const prisma = require("../config/prisma");
 
+const normalizeMobile = (mobile) => {
+  const digits = String(mobile || "").replace(/\D/g, "");
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+
+  if (digits.length === 10) {
+    return digits;
+  }
+
+  return null;
+};
+
+/* ==================== SEND BULK INVITATIONS ==================== */
+exports.sendBulkInvitations = async (req, res, next) => {
+  try {
+    const mandalId = Number(req.params.mandalId);
+    const members = req.body.members;
+
+    if (!Array.isArray(members) || members.length === 0) {
+      throw { status: 400, message: "Members are required" };
+    }
+
+    const mandal = await prisma.mandal.findUnique({ where: { id: mandalId } });
+    if (!mandal) throw { status: 404, message: "Mandal not found" };
+
+    if (mandal.createdById !== req.user.userId) {
+      throw { status: 403, message: "Not authorized to send invitations" };
+    }
+
+    const normalized = members.map((member, index) => {
+      const name = String(member?.name || "").trim();
+      const mobile = normalizeMobile(member?.mobile);
+      const role = String(member?.role || "Member").trim() || "Member";
+
+      if (!name || !mobile) {
+        throw {
+          status: 400,
+          message: `Member ${index + 1} needs a name and a valid mobile number`,
+        };
+      }
+
+      return { name, mobile, role };
+    });
+
+    const invitations = await prisma.$transaction(async (tx) => {
+      const saved = [];
+
+      for (const member of normalized) {
+        const existing = await tx.mandalInvitation.findUnique({
+          where: { mandalId_mobile: { mandalId, mobile: member.mobile } },
+        });
+
+        if (existing?.status === "PENDING") {
+          saved.push(
+            await tx.mandalInvitation.update({
+              where: { id: existing.id },
+              data: { name: member.name, role: member.role },
+            }),
+          );
+          continue;
+        }
+
+        if (existing) {
+          saved.push(existing);
+          continue;
+        }
+
+        saved.push(
+          await tx.mandalInvitation.create({
+            data: {
+              mandalId,
+              name: member.name,
+              mobile: member.mobile,
+              role: member.role,
+            },
+          }),
+        );
+      }
+
+      return saved;
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Invitations sent successfully",
+      count: invitations.length,
+      data: invitations,
+    });
+  } catch (e) {
+    next(e);
+  }
+};
+
 /* ==================== SEND INVITATION ==================== */
 exports.sendInvitation = async (req, res, next) => {
   try {

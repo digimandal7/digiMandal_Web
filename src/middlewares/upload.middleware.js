@@ -9,6 +9,7 @@ const upload = multer({
     const allowed = ["image/jpeg", "image/png", "application/pdf"];
     if (!allowed.includes(file.mimetype)) {
       cb(new Error("Only JPG, PNG, PDF allowed"));
+      return;
     }
     cb(null, true);
   }

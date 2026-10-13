@@ -78,6 +78,7 @@ model Mandal {
   size          String       @default("Medium") @db.VarChar(50)
   formationYear Int          @default(2025)
   isPrivate     Boolean      @default(false)
+  isRegistered  Boolean      @default(false)
   status        MandalStatus @default(DRAFT)
   description   String?      @db.Text
 
@@ -108,8 +109,10 @@ model MandalAddress {
   city         String  @db.VarChar(100)
   state        String  @db.VarChar(100)
   pincode      String  @db.VarChar(10)
-  latitude     String?
-  longitude    String?
+  latitude         String?
+  longitude        String?
+  placeId          String? @db.VarChar(255)
+  formattedAddress String? @db.Text
 
   mandal Mandal @relation(fields: [mandalId], references: [id], onDelete: Cascade)
 }
@@ -157,6 +160,7 @@ model MandalInvitation {
   mandalId   Int
   userId     Int?
   mobile     String           @db.VarChar(10)
+  name       String?          @db.VarChar(255)
   role       String           @default("Member") @db.VarChar(100)
   status     InvitationStatus @default(PENDING)
   createdAt  DateTime         @default(now())
