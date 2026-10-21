@@ -1,0 +1,2 @@
+ALTER TABLE `MandalInvitation`
+ADD COLUMN `name` VARCHAR(255) NULL;

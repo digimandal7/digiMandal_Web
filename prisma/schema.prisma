@@ -236,6 +236,7 @@ model MandalInvitation {
   mobile      String           @db.VarChar(10)
   role        String           @default("Member") @db.VarChar(100)
   roleId      Int?
+  name        String?          @db.VarChar(255)
   contactName String?          @db.VarChar(150)
   status      InvitationStatus @default(PENDING)
   createdAt   DateTime         @default(now())

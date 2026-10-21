@@ -259,10 +259,10 @@ exports.addAddress = async (req, res, next) => {
           city,
           state,
           pincode,
-          latitude,
-          longitude,
-          placeId,
-          formattedAddress,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          placeId: placeId ?? null,
+          formattedAddress: formattedAddress ?? null,
         },
       });
     } else {
@@ -274,10 +274,10 @@ exports.addAddress = async (req, res, next) => {
           city,
           state,
           pincode,
-          latitude,
-          longitude,
-          placeId,
-          formattedAddress,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          placeId: placeId ?? null,
+          formattedAddress: formattedAddress ?? null,
         },
       });
     }
@@ -305,20 +305,26 @@ exports.addBankDetails = async (req, res, next) => {
     await requireMandalPermission(mandalId, req.user.userId, "MANAGE_BANK");
 
     let bank = await prisma.mandalBank.findUnique({ where: { mandalId } });
+    const data = {
+      bankName: resolvedBankName,
+      accountName: String(accountName).trim(),
+      accountNumber: String(accountNumber).trim(),
+      ifscCode: String(ifscCode).trim().toUpperCase(),
+    };
 
     if (bank) {
       bank = await prisma.mandalBank.update({
         where: { mandalId },
-        data: { bankName: resolvedBankName, accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
+        data,
       });
     } else {
       bank = await prisma.mandalBank.create({
-        data: { mandalId, bankName: resolvedBankName, accountName: accountName.trim(), accountNumber, ifscCode: ifscCode.toUpperCase() },
+        data: { mandalId, ...data },
       });
     }
 
     await prisma.mandal.update({ where: { id: mandalId }, data: { bankDetailsSkipped: false } });
-    res.json({ success: true, data: { ...bank, accountNumber: `****${bank.accountNumber.slice(-4)}` } });
+    res.json({ success: true, data: { ...bank, bankCode: bankCode || null, accountNumber: `****${bank.accountNumber.slice(-4)}` } });
   } catch (e) {
     next(e);
   }
@@ -374,6 +380,14 @@ exports.addRegistration = async (req, res, next) => {
   }
 };
 
+const onboardingLocation = (address) => {
+  if (!address) return "";
+  if (address.addressLine2 && address.city) {
+    return `${address.addressLine2}, ${address.city}`;
+  }
+  return [address.city, address.state].filter(Boolean).join(", ");
+};
+
 exports.skipBankDetails = async (req, res, next) => {
   try {
     const mandalId = Number(req.params.id);
@@ -398,7 +412,24 @@ exports.getOnboardingStatus = async (req, res, next) => {
       certificate80G: !mandal.isRegistered || documentTypes.has("80G_CERTIFICATE"),
       bank: mandal.bankDetailsSkipped || (!!mandal.bank && documentTypes.has("CANCELLED_CHEQUE")),
     };
-    res.json({ success: true, data: { mandalId, status: mandal.status, onboardingStep: mandal.onboardingStep, invitationCount, requirements, canFinalize: Object.values(requirements).every(Boolean) } });
+    const steps = {
+      details: requirements.details,
+      address: requirements.address,
+      invitations: requirements.minimumInvitations,
+      registration: requirements.registration,
+      documents: requirements.registrationCertificate && requirements.certificate80G,
+      bankDetails: requirements.bank,
+    };
+    const canFinalize = Object.values(requirements).every(Boolean);
+    res.json({
+      success: true,
+      data: {
+        id: mandal.id, mandalId, name: mandal.name,
+        location: onboardingLocation(mandal.address),
+        status: mandal.status, onboardingStep: mandal.onboardingStep,
+        invitationCount, requirements, canFinalize, steps, isComplete: canFinalize,
+      },
+    });
   } catch (error) { next(error); }
 };
 
@@ -414,7 +445,7 @@ exports.finalizeMandal = async (req, res, next) => {
     if (mandal.isRegistered && !types.has("REGISTRATION_CERTIFICATE")) missing.push("registrationCertificate");
     if (mandal.isRegistered && !types.has("80G_CERTIFICATE")) missing.push("80GCertificate");
     if (!mandal.bankDetailsSkipped && !mandal.bank) missing.push("bankDetailsOrSkip");
-    if (mandal.bank && !types.has("CANCELLED_CHEQUE")) missing.push("cancelledCheque");
+    if (!mandal.bankDetailsSkipped && mandal.bank && !types.has("CANCELLED_CHEQUE")) missing.push("cancelledCheque");
     if (missing.length) throw apiError(400, "MANDAL_ONBOARDING_INCOMPLETE", "Complete all required Mandal steps", { missing });
     const updated = await prisma.mandal.update({ where: { id: mandalId }, data: { onboardingStep: 4, status: "ACTIVE", finalizedAt: new Date(), rejectionReason: null } });
     res.json({ success: true, message: "Mandal created successfully", data: updated });
