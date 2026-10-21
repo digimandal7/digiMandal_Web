@@ -1,0 +1,97 @@
+{
+  "at": "2026-10-15T11:10:52.381Z",
+  "environment": {
+    "os": "win32",
+    "node": "v22.12.0",
+    "cpus": 8,
+    "database": "local MySQL",
+    "fixture": "8 users, 4 Mandals, 120 text posts, 4 events, 2 localities"
+  },
+  "limitations": "Short loopback smoke load; no representative production/CDN/video traffic. Does not establish SLO compliance.",
+  "results": [
+    {
+      "name": "cold",
+      "concurrency": 1,
+      "requests": 8,
+      "seconds": 0.202,
+      "requestsPerSecond": 39.64,
+      "p50": 20.85,
+      "p95": 38.48,
+      "p99": 38.48,
+      "errorRate": 0,
+      "meanPayloadBytes": 13416,
+      "meanSqlQueries": 34.125,
+      "cacheHitRate": 0
+    },
+    {
+      "name": "warm",
+      "concurrency": 4,
+      "requests": 80,
+      "seconds": 0.788,
+      "requestsPerSecond": 101.46,
+      "p50": 36.69,
+      "p95": 59.43,
+      "p99": 70.42,
+      "errorRate": 0,
+      "meanPayloadBytes": 13417,
+      "meanSqlQueries": 32.15,
+      "cacheHitRate": 0.9875
+    },
+    {
+      "name": "spike",
+      "concurrency": 16,
+      "requests": 80,
+      "seconds": 0.621,
+      "requestsPerSecond": 128.83,
+      "p50": 124.35,
+      "p95": 139.56,
+      "p99": 150.1,
+      "errorRate": 0,
+      "meanPayloadBytes": 13419,
+      "meanSqlQueries": 32.125,
+      "cacheHitRate": 1
+    },
+    {
+      "name": "feed-next",
+      "concurrency": 4,
+      "requests": 80,
+      "seconds": 0.39,
+      "requestsPerSecond": 205.05,
+      "p50": 18.19,
+      "p95": 27.27,
+      "p99": 30.57,
+      "errorRate": 0,
+      "meanPayloadBytes": 10854,
+      "meanSqlQueries": 15,
+      "cacheHitRate": 0
+    },
+    {
+      "name": "mutation",
+      "concurrency": 4,
+      "requests": 40,
+      "seconds": 0.24,
+      "requestsPerSecond": 166.88,
+      "p50": 18.04,
+      "p95": 85.85,
+      "p99": 90.68,
+      "errorRate": 0,
+      "meanPayloadBytes": 112,
+      "meanSqlQueries": 14.025,
+      "cacheHitRate": 0
+    },
+    {
+      "name": "sustained",
+      "concurrency": 4,
+      "requests": 240,
+      "seconds": 34.681,
+      "requestsPerSecond": 6.92,
+      "p50": 70.21,
+      "p95": 82.36,
+      "p99": 137.67,
+      "errorRate": 0,
+      "meanPayloadBytes": 13418,
+      "meanSqlQueries": 32.21666666666667,
+      "cacheHitRate": 1
+    }
+  ]
+}

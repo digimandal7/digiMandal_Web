@@ -14,5 +14,8 @@ router.delete("/:id", auth, controller.deleteMandal);
 router.post("/:id/address", auth, controller.addAddress);
 router.post("/:id/bank-details", auth, controller.addBankDetails);
 router.post("/:id/registration", auth, controller.addRegistration);
+router.post("/:id/bank-details/skip", auth, controller.skipBankDetails);
+router.get("/:id/onboarding-status", auth, controller.getOnboardingStatus);
+router.post("/:id/finalize", auth, controller.finalizeMandal);
 
 module.exports = router;
