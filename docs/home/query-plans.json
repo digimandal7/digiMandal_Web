@@ -1,0 +1,326 @@
+[
+  {
+    "query": "SELECT `digimandal`.`MandalMember`.`id`, `digimandal`.`MandalMember`.`mandalId` FROM `digimandal`.`MandalMember` WHERE `digimandal`.`MandalMember`.`userId` = ?",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "SIMPLE",
+        "f2": "MandalMember",
+        "f3": null,
+        "f4": "ref",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_userId_idx",
+        "f6": "MandalMember_userId_idx",
+        "f7": "5",
+        "f8": "const",
+        "f9": "1",
+        "f10": 100,
+        "f11": null
+      }
+    ]
+  },
+  {
+    "query": "SELECT `digimandal`.`HomePost`.`id`, `digimandal`.`HomePost`.`mandalId`, `digimandal`.`HomePost`.`city`, `digimandal`.`HomePost`.`state`, `digimandal`.`HomePost`.`publishedAt`, `digimandal`.`HomePost`.`eventId` FROM `digimandal`.`HomePost` LEFT JOIN `digimandal`.`Mandal` AS `j1` ON (`j1`.`id`) = (`digimandal`.`HomePost`.`mandalId`) LEFT JOIN `digimandal`.`Mandal` AS `j3` ON (`j3`.`id`) = (`digimandal`.`HomePost`.`mandalId`) LEFT JOIN `digimandal`.`Mandal` AS `j5` ON (`j5`.`id`) = (`digimandal`.`HomePost`.`mandalId`) WHERE (`digimandal`.`HomePost`.`status` = ? AND `digimandal`.`HomePost`.`publishedAt` <= ? AND 1=1 AND (`j1`.`status` = ? AND 1=1 AND (`j1`.`isPrivate` = ? OR `j1`.`createdById` = ? OR (`j1`.`id`) IN (SELECT `t2`.`mandalId` FROM `digimandal`.`MandalMember` AS `t2` WHERE (`t2`.`userId` = ? AND `t2`.`mandalId` IS NOT NULL))) AND (`j1`.`id` IS NOT NULL)) AND (`digimandal`.`HomePost`.`visibility` = ? OR ((`j3`.`id`) IN (SELECT `t4`.`mandalId` FROM `digimandal`.`MandalMember` AS `t4` WHERE (`t4`.`userId` = ? AND `t4`.`mandalId` IS NOT NULL)) AND (`j3`.`id` IS NOT NULL)) OR (`j5`.`createdById` = ? AND (`j5`.`id` IS NOT NULL))) AND `digimandal`.`HomePost`.`city` = ? AND `digimandal`.`HomePost`.`state` = ? AND `digimandal`.`HomePost`.`visibility` = ?) ORDER BY `digimandal`.`HomePost`.`publishedAt` DESC, `digimandal`.`HomePost`.`id` DESC LIMIT ? OFFSET ?",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j1",
+        "f3": null,
+        "f4": "ref",
+        "f5": "PRIMARY,Mandal_createdById_idx,Mandal_status_idx",
+        "f6": "Mandal_status_idx",
+        "f7": "1",
+        "f8": "const",
+        "f9": "4",
+        "f10": 85.71428680419922,
+        "f11": "Using index condition; Using where; Using temporary; Using filesort"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "HomePost",
+        "f3": null,
+        "f4": "ref",
+        "f5": "HomePost_city_state_status_publishedAt_id_idx,HomePost_mandalId_status_publishedAt_id_idx",
+        "f6": "HomePost_mandalId_status_publishedAt_id_idx",
+        "f7": "86",
+        "f8": "digimandal.j1.id,const",
+        "f9": "8",
+        "f10": 0.8333333730697632,
+        "f11": "Using index condition; Using where"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j3",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.j1.id",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j5",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.j1.id",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using where"
+      },
+      {
+        "f0": "3",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t4",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      },
+      {
+        "f0": "2",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t2",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      }
+    ]
+  },
+  {
+    "query": "SELECT `digimandal`.`HomePost`.`id`, `digimandal`.`HomePost`.`authorId`, `digimandal`.`HomePost`.`mandalId`, `digimandal`.`HomePost`.`eventId`, `digimandal`.`HomePost`.`text`, `digimandal`.`HomePost`.`topic`, `digimandal`.`HomePost`.`voice`, `digimandal`.`HomePost`.`city`, `digimandal`.`HomePost`.`state`, `digimandal`.`HomePost`.`status`, `digimandal`.`HomePost`.`visibility`, `digimandal`.`HomePost`.`publishedAt`, `digimandal`.`HomePost`.`updatedAt` FROM `digimandal`.`HomePost` LEFT JOIN `digimandal`.`Mandal` AS `j1` ON (`j1`.`id`) = (`digimandal`.`HomePost`.`mandalId`) LEFT JOIN `digimandal`.`Mandal` AS `j3` ON (`j3`.`id`) = (`digimandal`.`HomePost`.`mandalId`) LEFT JOIN `digimandal`.`Mandal` AS `j5` ON (`j5`.`id`) = (`digimandal`.`HomePost`.`mandalId`) WHERE (`digimandal`.`HomePost`.`status` = ? AND `digimandal`.`HomePost`.`publishedAt` <= ? AND 1=1 AND (`j1`.`status` = ? AND 1=1 AND (`j1`.`isPrivate` = ? OR `j1`.`createdById` = ? OR (`j1`.`id`) IN (SELECT `t2`.`mandalId` FROM `digimandal`.`MandalMember` AS `t2` WHERE (`t2`.`userId` = ? AND `t2`.`mandalId` IS NOT NULL))) AND (`j1`.`id` IS NOT NULL)) AND (`digimandal`.`HomePost`.`visibility` = ? OR ((`j3`.`id`) IN (SELECT `t4`.`mandalId` FROM `digimandal`.`MandalMember` AS `t4` WHERE (`t4`.`userId` = ? AND `t4`.`mandalId` IS NOT NULL)) AND (`j3`.`id` IS NOT NULL)) OR (`j5`.`createdById` = ? AND (`j5`.`id` IS NOT NULL))) AND `digimandal`.`HomePost`.`id` IN (?,?,?,?,?,?,?,?,?,?))",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "HomePost",
+        "f3": null,
+        "f4": "range",
+        "f5": "PRIMARY,HomePost_mandalId_status_publishedAt_id_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": null,
+        "f9": "10",
+        "f10": 3.3330001831054688,
+        "f11": "Using where"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j1",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY,Mandal_createdById_idx,Mandal_status_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.HomePost.mandalId",
+        "f9": "1",
+        "f10": 57.142860412597656,
+        "f11": "Using where"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j3",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.HomePost.mandalId",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j5",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.HomePost.mandalId",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using where"
+      },
+      {
+        "f0": "3",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t4",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      },
+      {
+        "f0": "2",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t2",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      }
+    ]
+  },
+  {
+    "query": "SELECT `digimandal`.`HomeEvent`.`id` FROM `digimandal`.`HomeEvent` LEFT JOIN `digimandal`.`Mandal` AS `j1` ON (`j1`.`id`) = (`digimandal`.`HomeEvent`.`mandalId`) WHERE (`digimandal`.`HomeEvent`.`city` = ? AND `digimandal`.`HomeEvent`.`state` = ? AND `digimandal`.`HomeEvent`.`status` = ? AND `digimandal`.`HomeEvent`.`endsAt` > ? AND (`j1`.`isPrivate` = ? AND `j1`.`status` = ? AND (`j1`.`id` IS NOT NULL))) ORDER BY `digimandal`.`HomeEvent`.`priority` DESC, `digimandal`.`HomeEvent`.`startsAt` ASC, `digimandal`.`HomeEvent`.`id` ASC LIMIT ? OFFSET ?",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "SIMPLE",
+        "f2": "j1",
+        "f3": null,
+        "f4": "ref",
+        "f5": "PRIMARY,Mandal_status_idx",
+        "f6": "Mandal_status_idx",
+        "f7": "1",
+        "f8": "const",
+        "f9": "4",
+        "f10": 14.285715103149414,
+        "f11": "Using index condition; Using where; Using temporary; Using filesort"
+      },
+      {
+        "f0": "1",
+        "f1": "SIMPLE",
+        "f2": "HomeEvent",
+        "f3": null,
+        "f4": "ref",
+        "f5": "HomeEvent_city_state_status_endsAt_idx,HomeEvent_mandalId_idx",
+        "f6": "HomeEvent_mandalId_idx",
+        "f7": "4",
+        "f8": "digimandal.j1.id",
+        "f9": "1",
+        "f10": 50,
+        "f11": "Using where"
+      }
+    ]
+  },
+  {
+    "query": "SELECT `digimandal`.`HomeEvent`.`id` FROM `digimandal`.`HomeEvent` LEFT JOIN `digimandal`.`Mandal` AS `j1` ON (`j1`.`id`) = (`digimandal`.`HomeEvent`.`mandalId`) WHERE (`digimandal`.`HomeEvent`.`id` IN (?,?) AND `digimandal`.`HomeEvent`.`status` = ? AND (`j1`.`status` = ? AND 1=1 AND (`j1`.`isPrivate` = ? OR `j1`.`createdById` = ? OR (`j1`.`id`) IN (SELECT `t2`.`mandalId` FROM `digimandal`.`MandalMember` AS `t2` WHERE (`t2`.`userId` = ? AND `t2`.`mandalId` IS NOT NULL))) AND (`j1`.`id` IS NOT NULL)) AND `digimandal`.`HomeEvent`.`endsAt` > ?)",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "HomeEvent",
+        "f3": null,
+        "f4": "range",
+        "f5": "PRIMARY,HomeEvent_mandalId_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": null,
+        "f9": "2",
+        "f10": 25,
+        "f11": "Using where"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j1",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY,Mandal_createdById_idx,Mandal_status_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.HomeEvent.mandalId",
+        "f9": "1",
+        "f10": 57.142860412597656,
+        "f11": "Using where"
+      },
+      {
+        "f0": "2",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t2",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      }
+    ]
+  },
+  {
+    "query": "SELECT `digimandal`.`HomeEvent`.`id`, `digimandal`.`HomeEvent`.`mandalId`, `digimandal`.`HomeEvent`.`title`, `digimandal`.`HomeEvent`.`description`, `digimandal`.`HomeEvent`.`venue`, `digimandal`.`HomeEvent`.`city`, `digimandal`.`HomeEvent`.`state`, `digimandal`.`HomeEvent`.`category`, `digimandal`.`HomeEvent`.`mediaId`, `digimandal`.`HomeEvent`.`startsAt`, `digimandal`.`HomeEvent`.`endsAt`, `digimandal`.`HomeEvent`.`status`, `digimandal`.`HomeEvent`.`promotionStart`, `digimandal`.`HomeEvent`.`promotionEnd`, `digimandal`.`HomeEvent`.`priority` FROM `digimandal`.`HomeEvent` LEFT JOIN `digimandal`.`Mandal` AS `j1` ON (`j1`.`id`) = (`digimandal`.`HomeEvent`.`mandalId`) WHERE (`digimandal`.`HomeEvent`.`status` = ? AND (`j1`.`status` = ? AND 1=1 AND (`j1`.`isPrivate` = ? OR `j1`.`createdById` = ? OR (`j1`.`id`) IN (SELECT `t2`.`mandalId` FROM `digimandal`.`MandalMember` AS `t2` WHERE (`t2`.`userId` = ? AND `t2`.`mandalId` IS NOT NULL))) AND (`j1`.`id` IS NOT NULL)) AND `digimandal`.`HomeEvent`.`id` IN (?,?))",
+    "plan": [
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "HomeEvent",
+        "f3": null,
+        "f4": "range",
+        "f5": "PRIMARY,HomeEvent_mandalId_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": null,
+        "f9": "2",
+        "f10": 25,
+        "f11": "Using where"
+      },
+      {
+        "f0": "1",
+        "f1": "PRIMARY",
+        "f2": "j1",
+        "f3": null,
+        "f4": "eq_ref",
+        "f5": "PRIMARY,Mandal_createdById_idx,Mandal_status_idx",
+        "f6": "PRIMARY",
+        "f7": "4",
+        "f8": "digimandal.HomeEvent.mandalId",
+        "f9": "1",
+        "f10": 57.142860412597656,
+        "f11": "Using where"
+      },
+      {
+        "f0": "2",
+        "f1": "DEPENDENT SUBQUERY",
+        "f2": "t2",
+        "f3": null,
+        "f4": "unique_subquery",
+        "f5": "MandalMember_mandalId_userId_key,MandalMember_mandalId_idx,MandalMember_userId_idx",
+        "f6": "MandalMember_mandalId_userId_key",
+        "f7": "9",
+        "f8": "func,const",
+        "f9": "1",
+        "f10": 100,
+        "f11": "Using index"
+      }
+    ]
+  }
+]

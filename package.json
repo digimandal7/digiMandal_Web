@@ -9,11 +9,21 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:seed": "node prisma/seed.js"
+    "prisma:seed": "node prisma/seed.js",
+    "superadmin:grant": "node scripts/grant-super-admin.js",
+    "banks:sync": "node scripts/sync-banks.js",
+    "test": "node --test tests/home/core.test.js",
+    "test:home:integration": "node --test tests/home/integration.test.js",
+    "home:worker": "node scripts/home-worker.js",
+    "home:load": "node scripts/home-load.js",
+    "home:explain": "node scripts/home-explain.js",
+    "home:contracts": "node scripts/home-contracts.js",
+    "test:home:contract": "node --test tests/home/contract.test.js"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -22,9 +32,11 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "sharp": "^0.35.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^13.0.0",
     "nodemon": "^3.0.3",
     "prisma": "^5.10.2"
   }

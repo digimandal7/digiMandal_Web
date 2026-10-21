@@ -11,14 +11,22 @@ const memberRoutes = require("./routes/member.routes");
 const documentRoutes = require("./routes/document.routes");
 const interestRoutes = require("./routes/interest.routes");
 const locationRoutes = require("./routes/location.routes");
+const catalogRoutes = require("./routes/catalog.routes");
+const roleRoutes = require("./routes/role.routes");
 const rateLimit = require("express-rate-limit");
 const { errorHandler } = require("./middlewares/error.middleware");
+const { startBankSyncScheduler } = require("./services/bank-sync.service");
 
 const app = express();
+const homeTelemetry = require("./home/telemetry");
+homeTelemetry.instrument(prisma);
+require("./home/core").config();
+app.use(require("compression")());
 
 app.use(cors());
-app.use(express.json());
-app.use(morgan("dev"));
+const jsonParser = express.json({ limit: "64kb" });
+app.use((req,res,next) => req.path.startsWith("/api/v1") ? next() : jsonParser(req,res,next));
+app.use(morgan("dev", { skip: req => req.originalUrl.startsWith("/api/v1") }));
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -42,6 +50,18 @@ app.use("/api/members", memberRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/interests", interestRoutes);
 app.use("/api/locations", locationRoutes);
+app.use("/api/catalog", catalogRoutes);
+app.use("/api/roles", roleRoutes);
+app.use("/api/v1", require("./home/routes"));
+app.get("/health/live", (req,res) => res.json({ status:"ok" }));
+app.get("/health/ready", async (req,res) => {
+  let timer;
+  try {
+    await Promise.race([prisma.$queryRaw`SELECT 1`,new Promise((_,reject)=>{ timer=setTimeout(()=>reject(new Error("timeout")),1000); })]);
+    res.json({ status:"ready" });
+  } catch { res.status(503).json({ status:"unavailable" }); }
+  finally { clearTimeout(timer); }
+});
 
 app.use(errorHandler);
 
@@ -60,18 +80,25 @@ async function connectDatabase() {
 /* -------------------- SERVER START -------------------- */
 const PORT = process.env.PORT || 3000;
 
-connectDatabase().then(() => {
-  app.listen(PORT, () => {
+let server;
+if (require.main === module) connectDatabase().then(() => {
+  server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    startBankSyncScheduler();
   });
 });
 
 /* -------------------- GRACEFUL SHUTDOWN -------------------- */
 const shutdown = async (signal) => {
   console.log(`\n🛑 Received ${signal}. Closing server...`);
+  if (server) await new Promise(resolve => {
+    const timer=setTimeout(()=>{ server.closeAllConnections(); resolve(); },10000);
+    server.close(()=>{ clearTimeout(timer); resolve(); });
+  });
   await prisma.$disconnect();
   process.exit(0);
 };
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
+module.exports = app;

@@ -1,0 +1,526 @@
+{
+  "info": {
+    "name": "DigiMandal Home v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Home bootstrap",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/home",
+        "description": "Optional sections may return status=unavailable. Core feed/authentication failure fails the request. Keep serverTime for countdowns."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "const feed=data?.feed || data;",
+              "if(feed?.nextCursor) pm.collectionVariables.set('cursor',feed.nextCursor);",
+              "if(feed?.items?.length) pm.collectionVariables.set('post_id',feed.items[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Next feed page",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/home/feed?cursor={{cursor}}&limit=10",
+        "description": "30-minute HMAC-signed cursor bound to viewer and selected location. Up to 300 snapshot candidates. Short/empty pages can occur after moderation; follow nextCursor."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "const feed=data?.feed || data;",
+              "if(feed?.nextCursor) pm.collectionVariables.set('cursor',feed.nextCursor);",
+              "if(feed?.items?.length) pm.collectionVariables.set('post_id',feed.items[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Home mandals",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/home/mandals",
+        "description": "Independently loadable section. Hero/trending support private ETag revalidation."
+      }
+    },
+    {
+      "name": "Home hero",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/home/hero",
+        "description": "Independently loadable section. Hero/trending support private ETag revalidation."
+      }
+    },
+    {
+      "name": "Home trending",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/home/trending",
+        "description": "Independently loadable section. Hero/trending support private ETag revalidation."
+      }
+    },
+    {
+      "name": "Select Home location",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/home/location",
+        "description": "",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"city\": \"Pune\",\n  \"state\": \"Maharashtra\"\n}"
+        }
+      }
+    },
+    {
+      "name": "View posts",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/posts/{{post_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "View events",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/events/{{event_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "View mandals",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/mandals/{{mandal_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "View profiles",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/profiles/{{user_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "put like",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/posts/{{post_id}}/like",
+        "description": "Idempotent, returns authoritative state and count. Retried transaction conflicts are bounded."
+      }
+    },
+    {
+      "name": "delete like",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/posts/{{post_id}}/like",
+        "description": "Idempotent, returns authoritative state and count. Retried transaction conflicts are bounded."
+      }
+    },
+    {
+      "name": "put save",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/posts/{{post_id}}/save",
+        "description": "Idempotent, returns authoritative state and count. Retried transaction conflicts are bounded."
+      }
+    },
+    {
+      "name": "delete save",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/posts/{{post_id}}/save",
+        "description": "Idempotent, returns authoritative state and count. Retried transaction conflicts are bounded."
+      }
+    },
+    {
+      "name": "put membership",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/mandals/{{mandal_id}}/membership",
+        "description": "Idempotent. Private Mandals require invitation through existing onboarding APIs."
+      }
+    },
+    {
+      "name": "delete membership",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/mandals/{{mandal_id}}/membership",
+        "description": "Idempotent. Private Mandals require invitation through existing onboarding APIs."
+      }
+    },
+    {
+      "name": "put participation",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/events/{{event_id}}/participation",
+        "description": "Idempotent. Private Mandals require invitation through existing onboarding APIs."
+      }
+    },
+    {
+      "name": "delete participation",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/events/{{event_id}}/participation",
+        "description": "Idempotent. Private Mandals require invitation through existing onboarding APIs."
+      }
+    },
+    {
+      "name": "Record impression",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/posts/{{post_id}}/impression",
+        "description": "Deduplicated per user/post/UTC day. Retained for 30 days by worker."
+      }
+    },
+    {
+      "name": "Report post",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/posts/{{post_id}}/report",
+        "description": "",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Spam\"\n}"
+        }
+      }
+    },
+    {
+      "name": "put block",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/profiles/{{user_id}}/block",
+        "description": ""
+      }
+    },
+    {
+      "name": "delete block",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/profiles/{{user_id}}/block",
+        "description": ""
+      }
+    },
+    {
+      "name": "put mute",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/profiles/{{user_id}}/mute",
+        "description": ""
+      }
+    },
+    {
+      "name": "delete mute",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/profiles/{{user_id}}/mute",
+        "description": ""
+      }
+    },
+    {
+      "name": "List comments",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/posts/{{post_id}}/comments",
+        "description": "Descending ID cursor pagination. Hidden/deleted comments and filtered authors omitted."
+      }
+    },
+    {
+      "name": "Create comment",
+      "request": {
+        "method": "POST",
+        "url": "{{home_base_url}}/posts/{{post_id}}/comments",
+        "description": "",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Thank you for organizing this.\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create community post",
+      "request": {
+        "method": "POST",
+        "url": "{{home_base_url}}/posts",
+        "description": "Requires MANAGE_POSTS or creator/Admin. Media must be owned and READY. Locality is taken from the Mandal address; voice badges cannot be self-assigned.",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mandalId\": {{mandal_id}},\n  \"text\": \"Join us for the community celebration.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "if(data?.id) pm.collectionVariables.set('post_id',data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete post",
+      "request": {
+        "method": "DELETE",
+        "url": "{{home_base_url}}/posts/{{post_id}}",
+        "description": "Soft delete by author or MANAGE_POSTS role."
+      }
+    },
+    {
+      "name": "Create event",
+      "request": {
+        "method": "POST",
+        "url": "{{home_base_url}}/events",
+        "description": "Requires MANAGE_EVENTS. Mandal must be active with an address.",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mandalId\": {{mandal_id}},\n  \"title\": \"Ganesh Utsav\",\n  \"description\": \"Community celebration\",\n  \"venue\": \"Community hall\",\n  \"category\": \"Festival\",\n  \"startsAt\": \"2027-01-01T10:00:00Z\",\n  \"endsAt\": \"2027-01-01T18:00:00Z\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "if(data?.id) pm.collectionVariables.set('event_id',data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule hero promotion",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/admin/events/{{event_id}}/promotion",
+        "description": "Requires platform SUPER_ADMIN. ",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startsAt\": \"2027-01-01T10:00:00Z\",\n  \"endsAt\": \"2027-01-01T18:00:00Z\",\n  \"priority\": 1\n}"
+        }
+      }
+    },
+    {
+      "name": "Moderate content",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/admin/posts/{{post_id}}/moderation",
+        "description": "Requires platform SUPER_ADMIN. kind: posts, events, stories, comments.",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"HIDDEN\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create 24-hour story",
+      "request": {
+        "method": "POST",
+        "url": "{{home_base_url}}/stories",
+        "description": "Requires MANAGE_POSTS and READY owned media.",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mandalId\": {{mandal_id}},\n  \"mediaId\": \"{{media_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "if(data?.id) pm.collectionVariables.set('story_id',data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "View story",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/stories/{{story_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "Record story seen",
+      "request": {
+        "method": "PUT",
+        "url": "{{home_base_url}}/stories/{{story_id}}/seen",
+        "description": "Idempotent and privacy checked."
+      }
+    },
+    {
+      "name": "Upload media",
+      "request": {
+        "method": "POST",
+        "url": "{{home_base_url}}/media",
+        "description": "JPEG/PNG/WebP, max 10 MiB/40MP, no animation. Returns 202 PENDING; poll media endpoint. Worker must run.",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": ""
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data=pm.response.json().data;",
+              "if(data?.id) pm.collectionVariables.set('media_id',data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Poll own media",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/media/{{media_id}}",
+        "description": ""
+      }
+    },
+    {
+      "name": "Inspect Home metrics",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/admin/home/metrics",
+        "description": "Requires platform SUPER_ADMIN. "
+      }
+    },
+    {
+      "name": "Scrape Home Prometheus metrics",
+      "request": {
+        "method": "GET",
+        "url": "{{home_base_url}}/admin/home/metrics/prometheus",
+        "description": "Requires platform SUPER_ADMIN. "
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "home_base_url",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "cursor",
+      "value": ""
+    },
+    {
+      "key": "post_id",
+      "value": ""
+    },
+    {
+      "key": "mandal_id",
+      "value": ""
+    },
+    {
+      "key": "event_id",
+      "value": ""
+    },
+    {
+      "key": "story_id",
+      "value": ""
+    },
+    {
+      "key": "media_id",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    }
+  ]
+}
