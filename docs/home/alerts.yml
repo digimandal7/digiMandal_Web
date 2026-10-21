@@ -1,0 +1,38 @@
+groups:
+  - name: digimandal-home
+    rules:
+      - alert: HomeElevatedFailureRate
+        expr: sum(rate(digimandal_home_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(digimandal_home_requests_total[5m])), 1) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Home failure rate exceeds 1%; inspect database readiness and request IDs."
+      - alert: HomeHighP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(digimandal_home_duration_seconds_bucket{route="/home"}[5m]))) > 0.4
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Home bootstrap p95 exceeds the provisional 400ms objective."
+      - alert: HomePartialResponses
+        expr: sum(rate(digimandal_home_events_total{event=~"partial_.*"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Optional Home sections are failing; inspect section dependencies."
+      - alert: HomeMediaBacklog
+        expr: digimandal_home_media_pending > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Media queue backlog; check worker and ImageKit credentials."
+      - alert: HomeMediaFailures
+        expr: digimandal_home_media_failed > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Media jobs exhausted retries."

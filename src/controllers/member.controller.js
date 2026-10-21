@@ -204,6 +204,10 @@ exports.leaveMandal = async (req, res, next) => {
     if (!member)
       throw { status: 404, message: "You are not a member of this mandal" };
 
+    const mandal = await prisma.mandal.findUnique({ where: { id: mandalId }, select: { createdById: true } });
+    if (mandal.createdById === req.user.userId)
+      throw { status: 409, code: "CREATOR_MUST_REMAIN", message: "The creator must remain an Admin" };
+
     await prisma.mandalMember.delete({ where: { id: member.id } });
 
     res.json({

@@ -63,6 +63,19 @@ model User {
   invitations        MandalInvitation[]
   memberships        MandalMember[]
   preferredLocations UserPreferredLocation[]
+  homeLocation       HomeLocation?
+  homePosts          HomePost[]
+  homeComments       HomeComment[]
+  homeLikes          HomeLike[]
+  homeSaves          HomeSave[]
+  homeParticipants   HomeParticipant[]
+  homeSeen           HomeStorySeen[]
+  homeReports        HomeReport[]
+  homeImpressions    HomeImpression[]
+  homeSnapshots      HomeSnapshot[]
+  homeFilters        HomeFilter[]            @relation("FilterOwner")
+  homeFilteredBy     HomeFilter[]            @relation("FilterTarget")
+  homeMedia          HomeMedia[]
 
   @@index([mobile])
   @@index([email])
@@ -127,6 +140,10 @@ model Mandal {
   invites      MandalInvitation[]
   documents    MandalDocument[]
   roles        MandalRole[]
+  avatarUrl    String?             @db.Text
+  homePosts    HomePost[]
+  homeEvents   HomeEvent[]
+  homeStories  HomeStory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -274,4 +291,205 @@ model Interest {
   createdAt   DateTime @default(now())
 
   @@index([name])
+}
+
+model HomeLocation {
+  userId    Int      @id
+  city      String   @db.VarChar(100)
+  state     String   @db.VarChar(100)
+  area      String?  @db.VarChar(100)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model HomePost {
+  id          Int              @id @default(autoincrement())
+  authorId    Int
+  mandalId    Int
+  eventId     Int?
+  text        String           @db.Text
+  topic       String?          @db.VarChar(100)
+  voice       String?          @db.VarChar(100)
+  city        String           @db.VarChar(100)
+  state       String           @db.VarChar(100)
+  status      String           @default("PUBLISHED") @db.VarChar(20)
+  visibility  String           @default("PUBLIC") @db.VarChar(20)
+  publishedAt DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mandal      Mandal           @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  event       HomeEvent?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  media       HomeMedia[]
+  likes       HomeLike[]
+  saves       HomeSave[]
+  comments    HomeComment[]
+  reports     HomeReport[]
+  impressions HomeImpression[]
+
+  @@index([city, state, status, publishedAt, id])
+  @@index([mandalId, status, publishedAt, id])
+}
+
+model HomeMedia {
+  id         String      @id @default(uuid())
+  ownerId    Int
+  postId     Int?
+  status     String      @default("PENDING") @db.VarChar(20)
+  mimeType   String      @db.VarChar(100)
+  width      Int?
+  height     Int?
+  bytes      Int?
+  variants   Json?
+  sourcePath String?     @db.Text
+  attempts   Int         @default(0)
+  leaseUntil DateTime?
+  leaseToken String?     @db.VarChar(40)
+  createdAt  DateTime    @default(now())
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  post       HomePost?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  events     HomeEvent[]
+  stories    HomeStory[]
+
+  @@index([status, leaseUntil, createdAt])
+}
+
+model HomeLike {
+  postId Int
+  userId Int
+  post   HomePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+}
+
+model HomeSave {
+  postId Int
+  userId Int
+  post   HomePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+}
+
+model HomeComment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  authorId  Int
+  text      String   @db.VarChar(2000)
+  status    String   @default("PUBLISHED") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  post      HomePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, status, id])
+}
+
+model HomeEvent {
+  id             Int               @id @default(autoincrement())
+  mandalId       Int
+  title          String            @db.VarChar(200)
+  description    String            @db.Text
+  venue          String            @db.VarChar(255)
+  city           String            @db.VarChar(100)
+  state          String            @db.VarChar(100)
+  category       String            @db.VarChar(100)
+  mediaId        String?           @db.VarChar(40)
+  startsAt       DateTime
+  endsAt         DateTime
+  status         String            @default("PUBLISHED") @db.VarChar(20)
+  promotionStart DateTime?
+  promotionEnd   DateTime?
+  priority       Int               @default(0)
+  mandal         Mandal            @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  posts          HomePost[]
+  media          HomeMedia?        @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  participants   HomeParticipant[]
+
+  @@index([city, state, status, endsAt])
+  @@index([mandalId])
+}
+
+model HomeParticipant {
+  eventId Int
+  userId  Int
+  event   HomeEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+}
+
+model HomeStory {
+  id        Int             @id @default(autoincrement())
+  mandalId  Int
+  mediaId   String          @db.VarChar(40)
+  status    String          @default("PUBLISHED") @db.VarChar(20)
+  createdAt DateTime        @default(now())
+  expiresAt DateTime
+  mandal    Mandal          @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  seen      HomeStorySeen[]
+  media     HomeMedia       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([mandalId, status, expiresAt])
+}
+
+model HomeStorySeen {
+  storyId Int
+  userId  Int
+  seenAt  DateTime  @default(now())
+  story   HomeStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, userId])
+  @@index([userId])
+}
+
+model HomeFilter {
+  userId   Int
+  targetId Int
+  kind     String @db.VarChar(10)
+  user     User   @relation("FilterOwner", fields: [userId], references: [id], onDelete: Cascade)
+  target   User   @relation("FilterTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, targetId, kind])
+  @@index([targetId, kind])
+}
+
+model HomeReport {
+  postId    Int
+  userId    Int
+  reason    String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+  post      HomePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+}
+
+model HomeImpression {
+  postId    Int
+  userId    Int
+  day       String   @db.VarChar(10)
+  createdAt DateTime @default(now())
+  post      HomePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId, day])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model HomeSnapshot {
+  id          String   @id @default(uuid())
+  userId      Int
+  locationKey String   @db.VarChar(255)
+  postIds     Json
+  expiresAt   DateTime
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
 }

@@ -1,0 +1,12 @@
+{
+  "title": "DigiMandal Home",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {"id":1,"title":"Home p95 seconds","type":"timeseries","gridPos":{"x":0,"y":0,"w":12,"h":8},"targets":[{"expr":"histogram_quantile(0.95, sum by (le) (rate(digimandal_home_duration_seconds_bucket{route=\"/home\"}[5m])))","refId":"A"}]},
+    {"id":2,"title":"Request rate by status","type":"timeseries","gridPos":{"x":12,"y":0,"w":12,"h":8},"targets":[{"expr":"sum by (status) (rate(digimandal_home_requests_total[5m]))","refId":"A"}]},
+    {"id":3,"title":"Media backlog","type":"timeseries","gridPos":{"x":0,"y":8,"w":12,"h":8},"targets":[{"expr":"digimandal_home_media_pending","refId":"A"}]},
+    {"id":4,"title":"Cache hit rate","type":"timeseries","gridPos":{"x":12,"y":8,"w":12,"h":8},"targets":[{"expr":"rate(digimandal_home_cache_hits_total[5m]) / clamp_min(rate(digimandal_home_cache_hits_total[5m]) + rate(digimandal_home_cache_misses_total[5m]), 0.001)","refId":"A"}]}
+  ]
+}
