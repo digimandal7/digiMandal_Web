@@ -1,12 +1,6 @@
 const prisma = require("../config/prisma");
 const { requireMandalPermission, hasMandalPermission } = require("../services/mandal-access.service");
 
-const normalizeMobile = (value) => {
-  const digits = String(value || "").replace(/\D/g, "");
-  const mobile = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
-  return /^\d{10}$/.test(mobile) ? mobile : null;
-};
-
 async function resolveRole(mandalId, roleId, roleName = "Member") {
   const role = roleId
     ? await prisma.mandalRole.findUnique({ where: { id: Number(roleId) } })
