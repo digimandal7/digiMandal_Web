@@ -1,0 +1,2615 @@
+{
+  "info": {
+    "name": "DigiMandal - Issues API",
+    "description": "Complete Mandal-scoped issue workflow.\n\nSETUP: Set collection variables baseUrl and token (JWT without Bearer prefix). For admin actions set adminToken. Select mandalId from My active Mandals; selectedMemberId is the membership ID from Active members. Fill issue form variables and dates. Select local files in each multipart upload request. Generated IDs and retry keys are saved in collection variables. Do not create environment variables with the same names: environment values override captured collection variables.\n\nRUN: Execute folders in order manually. Optional authentication can be skipped if tokens are supplied. Do not run the entire collection unattended: uploads need file selection and the last folder contains alternative deletion/archive operations. Reuse the same publication/resolution key and body for retries. Clear publicationKey/resolutionKey when starting a new issue flow; upload fresh images.\n\nSECURITY: All issue routes require active membership. Cross-Mandal resources return 404; members cannot grant themselves approver roles. Tokens/passwords are intentionally blank. No requests were sent when generating this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mobile",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminMobile",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mandalId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "selectedMemberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "issueId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "commentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "issueUploadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "commentUploadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resolutionUploadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "abandonedUploadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "commentsReadThrough",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "publicationKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resolutionKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "issueTitle",
+      "value": "Enter issue title",
+      "type": "string"
+    },
+    {
+      "key": "issueDescription",
+      "value": "Enter issue description",
+      "type": "string"
+    },
+    {
+      "key": "issueLocation",
+      "value": "Enter issue location",
+      "type": "string"
+    },
+    {
+      "key": "occurrenceDate",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resolutionDate",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resolutionDescription",
+      "value": "Describe the completed solution",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication (optional)",
+      "description": "Paste existing tokens into collection variables, or use these password-login requests for already registered users. Credentials remain blank in this export.",
+      "item": [
+        {
+          "name": "Member login - save token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Member login - save token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"{{mobile}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mobile\",\"password\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "if(json.token) pm.collectionVariables.set('token',json.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin login - save adminToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Admin login - save adminToken",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"{{adminMobile}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"adminMobile\",\"adminPassword\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "if(json.token) pm.collectionVariables.set('adminToken',json.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Select Mandal and members",
+      "description": "Run permitted Mandals, set mandalId, then search members. Set selectedMemberId to MandalMember.memberId (NOT user.id) for participant/resolution operations.",
+      "item": [
+        {
+          "name": "My active Mandals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/mandals?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "mandals"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "My active Mandals"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "if (!pm.variables.get('mandalId') && json.data.items.length === 1) pm.collectionVariables.set('mandalId',String(json.data.items[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Active members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/members?page=1&limit=20&search=&role=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "members"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "role",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Active members"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Raise issue and preview",
+      "description": "Choose a local photo in Body > form-data. Fill issueTitle, issueDescription, issueLocation and occurrenceDate (YYYY-MM-DD). Publication key is generated once and reused for retries. Clear publicationKey and upload a NEW image before creating a separate issue.",
+      "item": [
+        {
+          "name": "Upload issue photo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issue-uploads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "issue-uploads"
+              ]
+            },
+            "description": "Upload issue photo",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "purpose",
+                  "value": "ISSUE",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a local JPEG or PNG, maximum 5 MiB. Do not manually set Content-Type."
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('issueUploadId',json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "View uploaded issue photo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issue-uploads/{{issueUploadId}}/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issue-uploads",
+                "{{issueUploadId}}",
+                "content"
+              ]
+            },
+            "description": "View uploaded issue photo"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview issue without publishing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issues/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "issues",
+                "preview"
+              ]
+            },
+            "description": "Preview issue without publishing",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{issueTitle}}\",\n  \"description\": \"{{issueDescription}}\",\n  \"locationOrMandalName\": \"{{issueLocation}}\",\n  \"occurrenceDate\": \"{{occurrenceDate}}\",\n  \"participants\": [],\n  \"uploadIds\": [\n    \"{{issueUploadId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\",\"issueTitle\",\"issueDescription\",\"issueLocation\",\"occurrenceDate\",\"issueUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish issue - save issueId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{publicationKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "issues"
+              ]
+            },
+            "description": "Publish issue - save issueId",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{issueTitle}}\",\n  \"description\": \"{{issueDescription}}\",\n  \"locationOrMandalName\": \"{{issueLocation}}\",\n  \"occurrenceDate\": \"{{occurrenceDate}}\",\n  \"participants\": [],\n  \"uploadIds\": [\n    \"{{issueUploadId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{publicationKey}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issues",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "mandals",
+                    "{{mandalId}}",
+                    "issues"
+                  ]
+                },
+                "description": "Publish issue - save issueId",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"{{issueTitle}}\",\n  \"description\": \"{{issueDescription}}\",\n  \"locationOrMandalName\": \"{{issueLocation}}\",\n  \"occurrenceDate\": \"{{occurrenceDate}}\",\n  \"participants\": [],\n  \"uploadIds\": [\n    \"{{issueUploadId}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Example",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 42,\n    \"mandalId\": 3,\n    \"title\": \"Entrance lighting needs repair\",\n    \"description\": \"The entrance light is not working.\",\n    \"shortDescription\": \"The entrance light is not working.\",\n    \"locationOrMandalName\": \"North entrance\",\n    \"status\": \"PENDING\",\n    \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n    \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"resolvedAt\": null,\n    \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"archivedAt\": null,\n    \"creator\": {\n      \"id\": 7,\n      \"name\": \"Example member\",\n      \"avatar\": null\n    },\n    \"mandal\": {\n      \"id\": 3,\n      \"name\": \"Example association\"\n    },\n    \"supporterCount\": 0,\n    \"commentCount\": 0,\n    \"participants\": [],\n    \"participantCount\": 0,\n    \"attachments\": [\n      {\n        \"id\": \"11111111-1111-4111-8111-111111111111\",\n        \"mimeType\": \"image/png\",\n        \"bytes\": 2048,\n        \"width\": 100,\n        \"height\": 100,\n        \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n        \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n      }\n    ],\n    \"totalAttachmentCount\": 1,\n    \"isSupported\": false,\n    \"permissions\": {\n      \"canEdit\": true,\n      \"canResolve\": false,\n      \"canDelete\": false,\n      \"canComment\": true,\n      \"canSupport\": true,\n      \"canDesignateApprovers\": false\n    },\n    \"supporterPreview\": [],\n    \"newCommentCount\": 0,\n    \"resolution\": null\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('publicationKey')) pm.collectionVariables.set('publicationKey', pm.variables.replaceIn('{{$guid}}'));",
+                  "const required=[\"publicationKey\",\"baseUrl\",\"mandalId\",\"issueTitle\",\"issueDescription\",\"issueLocation\",\"occurrenceDate\",\"issueUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('issueId',String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - List, filter and details",
+      "description": "Cards include counts, permissions, participants and attachment previews. All requests inherit member authentication.",
+      "item": [
+        {
+          "name": "ALL issues - latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=ALL&sort=LATEST&search=&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues"
+              ],
+              "query": [
+                {
+                  "key": "mandalId",
+                  "value": "{{mandalId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "ALL"
+                },
+                {
+                  "key": "sort",
+                  "value": "LATEST"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "ALL issues - latest"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=ALL&sort=LATEST&search=&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues"
+                  ],
+                  "query": [
+                    {
+                      "key": "mandalId",
+                      "value": "{{mandalId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ALL"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "LATEST"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "ALL issues - latest"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": 42,\n        \"mandalId\": 3,\n        \"title\": \"Entrance lighting needs repair\",\n        \"description\": \"The entrance light is not working.\",\n        \"shortDescription\": \"The entrance light is not working.\",\n        \"locationOrMandalName\": \"North entrance\",\n        \"status\": \"PENDING\",\n        \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n        \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"resolvedAt\": null,\n        \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n        \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"archivedAt\": null,\n        \"creator\": {\n          \"id\": 7,\n          \"name\": \"Example member\",\n          \"avatar\": null\n        },\n        \"mandal\": {\n          \"id\": 3,\n          \"name\": \"Example association\"\n        },\n        \"supporterCount\": 0,\n        \"commentCount\": 0,\n        \"participants\": [],\n        \"participantCount\": 0,\n        \"attachments\": [\n          {\n            \"id\": \"11111111-1111-4111-8111-111111111111\",\n            \"mimeType\": \"image/png\",\n            \"bytes\": 2048,\n            \"width\": 100,\n            \"height\": 100,\n            \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n            \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n          }\n        ],\n        \"totalAttachmentCount\": 1,\n        \"isSupported\": false,\n        \"permissions\": {\n          \"canEdit\": true,\n          \"canResolve\": false,\n          \"canDelete\": false,\n          \"canComment\": true,\n          \"canSupport\": true,\n          \"canDesignateApprovers\": false\n        }\n      }\n    ],\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"hasNext\": false\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PENDING issues - latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=PENDING&sort=LATEST&search=&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues"
+              ],
+              "query": [
+                {
+                  "key": "mandalId",
+                  "value": "{{mandalId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                },
+                {
+                  "key": "sort",
+                  "value": "LATEST"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "PENDING issues - latest"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=PENDING&sort=LATEST&search=&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues"
+                  ],
+                  "query": [
+                    {
+                      "key": "mandalId",
+                      "value": "{{mandalId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "PENDING"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "LATEST"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "PENDING issues - latest"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": 42,\n        \"mandalId\": 3,\n        \"title\": \"Entrance lighting needs repair\",\n        \"description\": \"The entrance light is not working.\",\n        \"shortDescription\": \"The entrance light is not working.\",\n        \"locationOrMandalName\": \"North entrance\",\n        \"status\": \"PENDING\",\n        \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n        \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"resolvedAt\": null,\n        \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n        \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"archivedAt\": null,\n        \"creator\": {\n          \"id\": 7,\n          \"name\": \"Example member\",\n          \"avatar\": null\n        },\n        \"mandal\": {\n          \"id\": 3,\n          \"name\": \"Example association\"\n        },\n        \"supporterCount\": 0,\n        \"commentCount\": 0,\n        \"participants\": [],\n        \"participantCount\": 0,\n        \"attachments\": [\n          {\n            \"id\": \"11111111-1111-4111-8111-111111111111\",\n            \"mimeType\": \"image/png\",\n            \"bytes\": 2048,\n            \"width\": 100,\n            \"height\": 100,\n            \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n            \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n          }\n        ],\n        \"totalAttachmentCount\": 1,\n        \"isSupported\": false,\n        \"permissions\": {\n          \"canEdit\": true,\n          \"canResolve\": false,\n          \"canDelete\": false,\n          \"canComment\": true,\n          \"canSupport\": true,\n          \"canDesignateApprovers\": false\n        }\n      }\n    ],\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"hasNext\": false\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RESOLVED issues - latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=RESOLVED&sort=LATEST&search=&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues"
+              ],
+              "query": [
+                {
+                  "key": "mandalId",
+                  "value": "{{mandalId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "RESOLVED"
+                },
+                {
+                  "key": "sort",
+                  "value": "LATEST"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "RESOLVED issues - latest"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=RESOLVED&sort=LATEST&search=&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues"
+                  ],
+                  "query": [
+                    {
+                      "key": "mandalId",
+                      "value": "{{mandalId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "RESOLVED"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "LATEST"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "RESOLVED issues - latest"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": 42,\n        \"mandalId\": 3,\n        \"title\": \"Entrance lighting needs repair\",\n        \"description\": \"The entrance light is not working.\",\n        \"shortDescription\": \"The entrance light is not working.\",\n        \"locationOrMandalName\": \"North entrance\",\n        \"status\": \"PENDING\",\n        \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n        \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"resolvedAt\": null,\n        \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n        \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"archivedAt\": null,\n        \"creator\": {\n          \"id\": 7,\n          \"name\": \"Example member\",\n          \"avatar\": null\n        },\n        \"mandal\": {\n          \"id\": 3,\n          \"name\": \"Example association\"\n        },\n        \"supporterCount\": 0,\n        \"commentCount\": 0,\n        \"participants\": [],\n        \"participantCount\": 0,\n        \"attachments\": [\n          {\n            \"id\": \"11111111-1111-4111-8111-111111111111\",\n            \"mimeType\": \"image/png\",\n            \"bytes\": 2048,\n            \"width\": 100,\n            \"height\": 100,\n            \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n            \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n          }\n        ],\n        \"totalAttachmentCount\": 1,\n        \"isSupported\": false,\n        \"permissions\": {\n          \"canEdit\": true,\n          \"canResolve\": false,\n          \"canDelete\": false,\n          \"canComment\": true,\n          \"canSupport\": true,\n          \"canDesignateApprovers\": false\n        }\n      }\n    ],\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"hasNext\": false\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Collaborated issues",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=ALL&sort=COLLABORATED&search=&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues"
+              ],
+              "query": [
+                {
+                  "key": "mandalId",
+                  "value": "{{mandalId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "ALL"
+                },
+                {
+                  "key": "sort",
+                  "value": "COLLABORATED"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Collaborated issues"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues?mandalId={{mandalId}}&status=ALL&sort=COLLABORATED&search=&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues"
+                  ],
+                  "query": [
+                    {
+                      "key": "mandalId",
+                      "value": "{{mandalId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ALL"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "COLLABORATED"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "Collaborated issues"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": 42,\n        \"mandalId\": 3,\n        \"title\": \"Entrance lighting needs repair\",\n        \"description\": \"The entrance light is not working.\",\n        \"shortDescription\": \"The entrance light is not working.\",\n        \"locationOrMandalName\": \"North entrance\",\n        \"status\": \"PENDING\",\n        \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n        \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"resolvedAt\": null,\n        \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n        \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n        \"archivedAt\": null,\n        \"creator\": {\n          \"id\": 7,\n          \"name\": \"Example member\",\n          \"avatar\": null\n        },\n        \"mandal\": {\n          \"id\": 3,\n          \"name\": \"Example association\"\n        },\n        \"supporterCount\": 0,\n        \"commentCount\": 0,\n        \"participants\": [],\n        \"participantCount\": 0,\n        \"attachments\": [\n          {\n            \"id\": \"11111111-1111-4111-8111-111111111111\",\n            \"mimeType\": \"image/png\",\n            \"bytes\": 2048,\n            \"width\": 100,\n            \"height\": 100,\n            \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n            \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n          }\n        ],\n        \"totalAttachmentCount\": 1,\n        \"isSupported\": false,\n        \"permissions\": {\n          \"canEdit\": true,\n          \"canResolve\": false,\n          \"canDelete\": false,\n          \"canComment\": true,\n          \"canSupport\": true,\n          \"canDesignateApprovers\": false\n        }\n      }\n    ],\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"hasNext\": false\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Issue details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}"
+              ]
+            },
+            "description": "Issue details"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues",
+                    "{{issueId}}"
+                  ]
+                },
+                "description": "Issue details"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 42,\n    \"mandalId\": 3,\n    \"title\": \"Entrance lighting needs repair\",\n    \"description\": \"The entrance light is not working.\",\n    \"shortDescription\": \"The entrance light is not working.\",\n    \"locationOrMandalName\": \"North entrance\",\n    \"status\": \"PENDING\",\n    \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n    \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"resolvedAt\": null,\n    \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"archivedAt\": null,\n    \"creator\": {\n      \"id\": 7,\n      \"name\": \"Example member\",\n      \"avatar\": null\n    },\n    \"mandal\": {\n      \"id\": 3,\n      \"name\": \"Example association\"\n    },\n    \"supporterCount\": 0,\n    \"commentCount\": 0,\n    \"participants\": [],\n    \"participantCount\": 0,\n    \"attachments\": [\n      {\n        \"id\": \"11111111-1111-4111-8111-111111111111\",\n        \"mimeType\": \"image/png\",\n        \"bytes\": 2048,\n        \"width\": 100,\n        \"height\": 100,\n        \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n        \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n      }\n    ],\n    \"totalAttachmentCount\": 1,\n    \"isSupported\": false,\n    \"permissions\": {\n      \"canEdit\": true,\n      \"canResolve\": false,\n      \"canDelete\": false,\n      \"canComment\": true,\n      \"canSupport\": true,\n      \"canDesignateApprovers\": false\n    },\n    \"supporterPreview\": [],\n    \"newCommentCount\": 0,\n    \"resolution\": null\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Issue photo thumbnail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issue-uploads/{{issueUploadId}}/content?thumbnail=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issue-uploads",
+                "{{issueUploadId}}",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "thumbnail",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Issue photo thumbnail"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Edit pending issue and participants",
+      "description": "Run before resolution. Member edits require the creator. Only an active Mandal admin may designate an APPROVER. Participant replacement overwrites the current selection.",
+      "item": [
+        {
+          "name": "Edit pending issue",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}"
+              ]
+            },
+            "description": "Edit pending issue",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{issueTitle}}\",\n  \"description\": \"{{issueDescription}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"issueTitle\",\"issueDescription\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Select member participant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/participants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "participants"
+              ]
+            },
+            "description": "Select member participant",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participants\": [{ \"memberId\": {{selectedMemberId}}, \"role\": \"MEMBER\" }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"selectedMemberId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin designate approver",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/participants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "participants"
+              ]
+            },
+            "description": "Admin designate approver",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participants\": [{ \"memberId\": {{selectedMemberId}}, \"role\": \"APPROVER\" }]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"adminToken\",\"selectedMemberId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Support",
+      "description": "Supporting and removing support are idempotent.",
+      "item": [
+        {
+          "name": "Support issue",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/support",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "support"
+              ]
+            },
+            "description": "Support issue"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues/{{issueId}}/support",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues",
+                    "{{issueId}}",
+                    "support"
+                  ]
+                },
+                "description": "Support issue"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"isSupported\": true,\n    \"supporterCount\": 1\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List supporters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/supporters?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "supporters"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List supporters"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove my support",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/support",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "support"
+              ]
+            },
+            "description": "Remove my support"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Comments",
+      "description": "Uploads and comments must use the same user token. Add comment captures commentId; edit/delete use that ID. Delete requests are in the final cleanup folder.",
+      "item": [
+        {
+          "name": "Upload comment photo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issue-uploads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "issue-uploads"
+              ]
+            },
+            "description": "Upload comment photo",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "purpose",
+                  "value": "COMMENT",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a local JPEG or PNG, maximum 5 MiB. Do not manually set Content-Type."
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('commentUploadId',json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add comment with attachment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments"
+              ]
+            },
+            "description": "Add comment with attachment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Enter your comment\",\n  \"uploadIds\": [\n    \"{{commentUploadId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues",
+                    "{{issueId}}",
+                    "comments"
+                  ]
+                },
+                "description": "Add comment with attachment",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Enter your comment\",\n  \"uploadIds\": [\n    \"{{commentUploadId}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Example",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 9,\n    \"issueId\": 42,\n    \"text\": \"Inspection is scheduled.\",\n    \"author\": {\n      \"id\": 7,\n      \"name\": \"Example member\",\n      \"avatar\": null\n    },\n    \"attachments\": [],\n    \"createdAt\": \"2026-01-03T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-03T10:00:00.000Z\",\n    \"permissions\": {\n      \"canEdit\": true,\n      \"canDelete\": true\n    }\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"commentUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('commentId',String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List comments - save read timestamp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List comments - save read timestamp"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('commentsReadThrough',json.serverTime);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acknowledge displayed comments",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments",
+                "read"
+              ]
+            },
+            "description": "Acknowledge displayed comments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"through\": \"{{commentsReadThrough}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"commentsReadThrough\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit my comment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "description": "Edit my comment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Enter updated comment text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"commentId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Resolve issue (admin)",
+      "description": "Requires adminToken from an active administrator of the SAME Mandal. Set resolutionDate (YYYY-MM-DD, on/after occurrence and not in the future), resolutionDescription and selectedMemberId. Proof upload and resolve must use the same token. A designated approver can use these requests by setting adminToken to their token.",
+      "item": [
+        {
+          "name": "Upload resolution proof as resolver",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mandals/{{mandalId}}/issue-uploads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mandals",
+                "{{mandalId}}",
+                "issue-uploads"
+              ]
+            },
+            "description": "Upload resolution proof as resolver",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "purpose",
+                  "value": "RESOLUTION",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a local JPEG or PNG, maximum 5 MiB. Do not manually set Content-Type."
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"mandalId\",\"adminToken\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "pm.collectionVariables.set('resolutionUploadId',json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve issue - retry-safe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{resolutionKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "resolve"
+              ]
+            },
+            "description": "Resolve issue - retry-safe",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolutionDate\": \"{{resolutionDate}}\",\n  \"description\": \"{{resolutionDescription}}\",\n  \"memberIds\": [{{selectedMemberId}}],\n  \"uploadIds\": [\"{{resolutionUploadId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{resolutionKey}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues/{{issueId}}/resolve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues",
+                    "{{issueId}}",
+                    "resolve"
+                  ]
+                },
+                "description": "Resolve issue - retry-safe",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"resolutionDate\": \"{{resolutionDate}}\",\n  \"description\": \"{{resolutionDescription}}\",\n  \"memberIds\": [{{selectedMemberId}}],\n  \"uploadIds\": [\"{{resolutionUploadId}}\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 4,\n    \"resolutionDate\": \"2026-01-03T00:00:00.000Z\",\n    \"description\": \"The light was replaced and tested.\",\n    \"resolver\": {\n      \"id\": 7,\n      \"name\": \"Example member\",\n      \"avatar\": null\n    },\n    \"solutionProviders\": [\n      {\n        \"memberId\": 12,\n        \"role\": \"RESOLVER\",\n        \"active\": true,\n        \"user\": {\n          \"id\": 7,\n          \"name\": \"Example member\",\n          \"avatar\": null\n        }\n      }\n    ],\n    \"attachments\": [\n      {\n        \"id\": \"22222222-2222-4222-8222-222222222222\",\n        \"mimeType\": \"image/png\",\n        \"bytes\": 2048,\n        \"width\": 100,\n        \"height\": 100,\n        \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n        \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n      }\n    ],\n    \"createdAt\": \"2026-01-03T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-03T10:00:00.000Z\"\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('resolutionKey')) pm.collectionVariables.set('resolutionKey', pm.variables.replaceIn('{{$guid}}'));",
+                  "const required=[\"resolutionKey\",\"baseUrl\",\"issueId\",\"adminToken\",\"resolutionDate\",\"resolutionDescription\",\"selectedMemberId\",\"resolutionUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Completed resolution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/resolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "resolution"
+              ]
+            },
+            "description": "Completed resolution"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolved issue details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}"
+              ]
+            },
+            "description": "Resolved issue details"
+          },
+          "response": [
+            {
+              "name": "200 example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "issues",
+                    "{{issueId}}"
+                  ]
+                },
+                "description": "Resolved issue details"
+              },
+              "status": "Example",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 42,\n    \"mandalId\": 3,\n    \"title\": \"Entrance lighting needs repair\",\n    \"description\": \"The entrance light is not working.\",\n    \"shortDescription\": \"The entrance light is not working.\",\n    \"locationOrMandalName\": \"North entrance\",\n    \"status\": \"PENDING\",\n    \"occurrenceDate\": \"2026-01-02T00:00:00.000Z\",\n    \"publishedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"resolvedAt\": null,\n    \"createdAt\": \"2026-01-02T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-02T10:00:00.000Z\",\n    \"archivedAt\": null,\n    \"creator\": {\n      \"id\": 7,\n      \"name\": \"Example member\",\n      \"avatar\": null\n    },\n    \"mandal\": {\n      \"id\": 3,\n      \"name\": \"Example association\"\n    },\n    \"supporterCount\": 0,\n    \"commentCount\": 0,\n    \"participants\": [],\n    \"participantCount\": 0,\n    \"attachments\": [\n      {\n        \"id\": \"11111111-1111-4111-8111-111111111111\",\n        \"mimeType\": \"image/png\",\n        \"bytes\": 2048,\n        \"width\": 100,\n        \"height\": 100,\n        \"url\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content\",\n        \"thumbnailUrl\": \"/api/issue-uploads/11111111-1111-4111-8111-111111111111/content?thumbnail=true\"\n      }\n    ],\n    \"totalAttachmentCount\": 1,\n    \"isSupported\": false,\n    \"permissions\": {\n      \"canEdit\": true,\n      \"canResolve\": false,\n      \"canDelete\": false,\n      \"canComment\": true,\n      \"canSupport\": true,\n      \"canDesignateApprovers\": false\n    },\n    \"supporterPreview\": [],\n    \"newCommentCount\": 0,\n    \"resolution\": null\n  },\n  \"serverTime\": \"2026-01-03T10:00:00.000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 - Optional deletion and archive - run individually",
+      "description": "These requests change/remove content. Run individually when intended. Delete your comment OR moderate it, not both. Archiving hides the issue and its media from all issue endpoints.",
+      "item": [
+        {
+          "name": "Delete my comment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "description": "Delete my comment"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"commentId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin moderate comment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}/comments/{{commentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}",
+                "comments",
+                "{{commentId}}"
+              ]
+            },
+            "description": "Admin moderate comment",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"commentId\",\"adminToken\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Abandon an unused upload",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issue-uploads/{{abandonedUploadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issue-uploads",
+                "{{abandonedUploadId}}"
+              ]
+            },
+            "description": "Set abandonedUploadId to an OWNED UNATTACHED upload. Attached issue/comment/resolution media cannot be abandoned."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"abandonedUploadId\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin archive issue",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "issues",
+                "{{issueId}}"
+              ]
+            },
+            "description": "Admin archive issue",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const required=[\"baseUrl\",\"issueId\",\"adminToken\"];",
+                  "for (const key of required) { if (!String(pm.variables.get(key) || '').trim()) throw new Error('Set variable \"'+key+'\" first (see collection instructions).'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "const json=pm.response.json();",
+                  "pm.test('Successful API response', function () { pm.expect(json.success).to.eql(true); });",
+                  "",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

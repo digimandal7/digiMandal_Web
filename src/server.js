@@ -44,6 +44,7 @@ app.use("/api/auth/send-otp", otpLimiter);
 app.use("/api/auth/resend-otp", otpLimiter);
 app.use("/api/auth/verify-otp", otpLimiter);
 app.use("/api/auth", authRoutes);
+app.use("/api", require("./issues/routes"));
 app.use("/api/mandal", mandalRoutes);
 app.use("/api/invitation", invitationRoutes);
 app.use("/api/members", memberRoutes);

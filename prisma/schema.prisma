@@ -76,6 +76,13 @@ model User {
   homeFilters        HomeFilter[]            @relation("FilterOwner")
   homeFilteredBy     HomeFilter[]            @relation("FilterTarget")
   homeMedia          HomeMedia[]
+  issues             Issue[]
+  issueSupports      IssueSupporter[]
+  issueComments      IssueComment[]
+  issueResolutions   IssueResolution[]
+  issueUploads       IssueUpload[]
+  issueActivity      IssueActivity[]
+  issueReads         IssueRead[]
 
   @@index([mobile])
   @@index([email])
@@ -144,6 +151,8 @@ model Mandal {
   homePosts    HomePost[]
   homeEvents   HomeEvent[]
   homeStories  HomeStory[]
+  issues       Issue[]
+  issueUploads IssueUpload[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -210,13 +219,15 @@ model MandalBank {
 }
 
 model MandalMember {
-  id       Int      @id @default(autoincrement())
-  mandalId Int
-  userId   Int?
-  mobile   String   @default("") @db.VarChar(10)
-  role     String   @db.VarChar(100)
-  roleId   Int?
-  joinedAt DateTime @default(now())
+  id                Int                @id @default(autoincrement())
+  mandalId          Int
+  userId            Int?
+  mobile            String             @default("") @db.VarChar(10)
+  role              String             @db.VarChar(100)
+  roleId            Int?
+  joinedAt          DateTime           @default(now())
+  isActive          Boolean            @default(true)
+  issueParticipants IssueParticipant[]
 
   mandal  Mandal      @relation(fields: [mandalId], references: [id], onDelete: Cascade)
   user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -227,6 +238,7 @@ model MandalMember {
   @@index([userId])
   @@index([mobile])
   @@index([roleId])
+  @@index([userId, isActive, mandalId])
 }
 
 model MandalInvitation {
@@ -492,5 +504,188 @@ model HomeSnapshot {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
+  @@index([userId])
+}
+
+enum IssueStatus {
+  PENDING
+  RESOLVED
+}
+
+enum IssueParticipantRole {
+  MEMBER
+  APPROVER
+  RESOLVER
+}
+
+enum IssueUploadPurpose {
+  ISSUE
+  COMMENT
+  RESOLUTION
+}
+
+model Issue {
+  id                   Int                @id @default(autoincrement())
+  mandalId             Int
+  createdByUserId      Int
+  title                String             @db.VarChar(200)
+  description          String             @db.Text
+  locationOrMandalName String             @db.VarChar(255)
+  occurrenceDate       DateTime
+  publishedAt          DateTime           @default(now())
+  status               IssueStatus        @default(PENDING)
+  resolvedAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  archivedAt           DateTime?
+  publicationKey       String             @db.VarChar(100)
+  publicationHash      String             @db.VarChar(64)
+  mandal               Mandal             @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  creator              User               @relation(fields: [createdByUserId], references: [id])
+  attachments          IssueAttachment[]
+  participants         IssueParticipant[]
+  supporters           IssueSupporter[]
+  comments             IssueComment[]
+  resolution           IssueResolution?
+  activity             IssueActivity[]
+  reads                IssueRead[]
+
+  @@unique([mandalId, createdByUserId, publicationKey])
+  @@index([mandalId, archivedAt, status, publishedAt, id])
+  @@index([mandalId, archivedAt, publishedAt, id])
+  @@index([createdByUserId, publishedAt])
+}
+
+model IssueUpload {
+  id                   String                     @id @default(uuid()) @db.VarChar(36)
+  mandalId             Int
+  ownerId              Int
+  purpose              IssueUploadPurpose
+  mimeType             String                     @db.VarChar(30)
+  bytes                Int
+  width                Int
+  height               Int
+  fileId               String                     @db.VarChar(255)
+  filePath             String                     @db.Text
+  state                String                     @default("READY") @db.VarChar(20)
+  createdAt            DateTime                   @default(now())
+  expiresAt            DateTime
+  mandal               Mandal                     @relation(fields: [mandalId], references: [id], onDelete: Cascade)
+  owner                User                       @relation(fields: [ownerId], references: [id])
+  issueAttachment      IssueAttachment?
+  commentAttachment    IssueCommentAttachment?
+  resolutionAttachment IssueResolutionAttachment?
+
+  @@index([state, expiresAt])
+  @@index([ownerId, mandalId])
+}
+
+model IssueAttachment {
+  id       Int         @id @default(autoincrement())
+  issueId  Int
+  uploadId String      @unique @db.VarChar(36)
+  issue    Issue       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  upload   IssueUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, id])
+}
+
+model IssueParticipant {
+  issueId   Int
+  memberId  Int
+  role      IssueParticipantRole @default(MEMBER)
+  createdAt DateTime             @default(now())
+  issue     Issue                @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  member    MandalMember         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, memberId, role])
+  @@index([memberId, role])
+}
+
+model IssueSupporter {
+  issueId   Int
+  userId    Int
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([issueId, userId])
+  @@index([userId, createdAt])
+  @@index([issueId, createdAt, userId])
+}
+
+model IssueComment {
+  id          Int                      @id @default(autoincrement())
+  issueId     Int
+  userId      Int
+  text        String                   @db.VarChar(2000)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  issue       Issue                    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author      User                     @relation(fields: [userId], references: [id])
+  attachments IssueCommentAttachment[]
+
+  @@index([issueId, createdAt, id])
+  @@index([userId, issueId])
+}
+
+model IssueCommentAttachment {
+  id        Int          @id @default(autoincrement())
+  commentId Int
+  uploadId  String       @unique @db.VarChar(36)
+  comment   IssueComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  upload    IssueUpload  @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([commentId, id])
+}
+
+model IssueResolution {
+  id               Int                         @id @default(autoincrement())
+  issueId          Int                         @unique
+  resolvedByUserId Int
+  resolutionDate   DateTime
+  description      String                      @db.Text
+  submissionKey    String                      @db.VarChar(100)
+  submissionHash   String                      @db.VarChar(64)
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  issue            Issue                       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  resolver         User                        @relation(fields: [resolvedByUserId], references: [id])
+  attachments      IssueResolutionAttachment[]
+
+  @@index([resolvedByUserId])
+}
+
+model IssueResolutionAttachment {
+  id           Int             @id @default(autoincrement())
+  resolutionId Int
+  uploadId     String          @unique @db.VarChar(36)
+  resolution   IssueResolution @relation(fields: [resolutionId], references: [id], onDelete: Cascade)
+  upload       IssueUpload     @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([resolutionId, id])
+}
+
+model IssueActivity {
+  id        Int      @id @default(autoincrement())
+  issueId   Int
+  userId    Int
+  action    String   @db.VarChar(40)
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, issueId, createdAt])
+  @@index([issueId, createdAt])
+}
+
+model IssueRead {
+  issueId        Int
+  userId         Int
+  commentsReadAt DateTime
+  issue          Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@id([issueId, userId])
   @@index([userId])
 }
