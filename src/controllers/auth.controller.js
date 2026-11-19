@@ -212,11 +212,12 @@ async function validateInterests(interests) {
 exports.completeRegistration = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const { name, email, password, confirmPassword, profileImage, preferredLanguage = "en", interests } = req.body;
+    const { name, email, password, confirmPassword, profileImage, pincode, preferredLanguage = "en", interests } = req.body;
     if (!name?.trim()) throw apiError(400, "NAME_REQUIRED", "Full name is required");
     if (!password || password.length < 8) throw apiError(400, "WEAK_PASSWORD", "Password must contain at least 8 characters");
     if (confirmPassword !== undefined && password !== confirmPassword) throw apiError(400, "PASSWORDS_DO_NOT_MATCH", "Passwords do not match");
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw apiError(400, "INVALID_EMAIL", "Enter a valid email address");
+    if (!/^\d{6}$/.test(String(pincode || ""))) throw apiError(400, "INVALID_PINCODE", "Enter a valid 6-digit PIN code");
     if (!SUPPORTED_LANGUAGES.has(preferredLanguage)) throw apiError(400, "INVALID_LANGUAGE", "Supported languages are en, hi, mr and gu");
     const interestIds = await validateInterests(interests);
     const current = await prisma.user.findUnique({ where: { id: userId } });
@@ -231,6 +232,7 @@ exports.completeRegistration = async (req, res, next) => {
       preferredLanguage,
       interestIds: JSON.stringify(interestIds),
       profileComplete: true,
+      pincode,
     };
     if (email) data.email = email;
     if (profileImage) data.profileImage = profileImage;
@@ -238,7 +240,7 @@ exports.completeRegistration = async (req, res, next) => {
       where: { id: userId },
       data,
     });
-    res.json({ success: true, message: "Registration completed successfully", user: { id: user.id, mobile: user.mobile, name: user.name, email: user.email, preferredLanguage: user.preferredLanguage, interests: interestIds, profileComplete: user.profileComplete } });
+    res.json({ success: true, message: "Registration completed successfully", user: { id: user.id, mobile: user.mobile, name: user.name, email: user.email, pincode: user.pincode, preferredLanguage: user.preferredLanguage, interests: interestIds, profileComplete: user.profileComplete } });
   } catch (error) { next(error); }
 };
 
@@ -247,6 +249,7 @@ exports.updateProfile = async (req, res, next) => {
     const userId = req.user.userId;
     const { name, email, profileImage, address, city, state, pincode, preferredLanguage, interests } = req.body;
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw apiError(400, "INVALID_EMAIL", "Enter a valid email address");
+    if (pincode !== undefined && !/^\d{6}$/.test(String(pincode))) throw apiError(400, "INVALID_PINCODE", "Enter a valid 6-digit PIN code");
     if (preferredLanguage !== undefined && !SUPPORTED_LANGUAGES.has(preferredLanguage)) throw apiError(400, "INVALID_LANGUAGE", "Supported languages are en, hi, mr and gu");
     if (email) {
       const duplicate = await prisma.user.findFirst({ where: { email, id: { not: userId } } });

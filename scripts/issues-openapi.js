@@ -100,6 +100,7 @@ const cardProperties = {
   description: string,
   shortDescription: string,
   locationOrMandalName: string,
+  pincode: { type: "string", pattern: "^[0-9]{6}$", readOnly: true },
   status: { type: "string", enum: ["PENDING", "RESOLVED"] },
   occurrenceDate: timestamp,
   publishedAt: timestamp,
@@ -214,6 +215,7 @@ const cardExample = {
   description: examples.CreateIssueRequest.description,
   shortDescription: examples.CreateIssueRequest.description,
   locationOrMandalName: "North entrance",
+  pincode: "411001",
   status: "PENDING",
   occurrenceDate: "2026-01-02T00:00:00.000Z",
   publishedAt: "2026-01-02T10:00:00.000Z",
@@ -378,7 +380,7 @@ operation(
       query("search", { type: "string", maxLength: 200 }),
     ],
     description:
-      "All Mandals are derived from active membership. Explicit inaccessible mandalId returns 404. LATEST: publishedAt DESC, id DESC. COLLABORATED: issues with your recorded activity first, latest personal activity DESC, publishedAt DESC, id DESC. Activity includes creation, selection, support/un-support, comment changes, edits and resolution. Historical interaction remains after removal. Paging is stable for an unchanged dataset; concurrent activity can move rows between pages. Cards include at most 10 participants and 5 images, with total counts.",
+      "Returns non-archived issues whose immutable issue pincode matches the authenticated user's registered pincode. An explicit mandalId filters that visible set. LATEST: publishedAt DESC, id DESC. COLLABORATED: issues with your recorded activity first, latest personal activity DESC, publishedAt DESC, id DESC. Activity includes creation, selection, support/un-support, comment changes, edits and resolution. Historical interaction remains after removal. Paging is stable for an unchanged dataset; concurrent activity can move rows between pages. Cards include at most 10 participants and 5 images, with total counts.",
     example: {
       items: [cardExample],
       page: 1,
@@ -572,7 +574,7 @@ paths["/mandals/{mandalId}/issue-uploads"].post.requestBody = {
 operation(
   "/issue-uploads/{uploadId}/content",
   "get",
-  "Read image bytes with fresh membership authorization",
+  "Read image bytes with fresh pincode authorization",
   string,
   null,
   { query: [query("thumbnail", boolean)] },
@@ -596,7 +598,7 @@ const spec = {
     title: "DigiMandal Issues API",
     version: "1.0.0",
     description:
-      "Tenant-isolated issues using existing MySQL, JWT, Mandal membership and private ImageKit storage. Every endpoint requires active membership. Mandal owners and platform admins have no membership bypass. All returned timestamps are UTC. Request examples are illustrative, not seeded production data.",
+      "Pincode-scoped issues using existing MySQL, JWT, Mandal membership and private ImageKit storage. Every issue belongs to one Mandal, while authenticated users with the same registered pincode may view, support and comment. Creation, participant selection, resolution and administration still require the relevant active Mandal role. The server derives and snapshots pincode from the creator profile. All returned timestamps are UTC. Request examples are illustrative, not seeded production data.",
   },
   servers: [{ url: "/api" }],
   security: [{ bearerAuth: [] }],
@@ -614,8 +616,8 @@ delete schemas.UpdateCommentRequest.required;
 operation(
   "/issues/mandals",
   "get",
-  "List Mandals permitted by active membership",
-  page(object({ id: integer, name: string })),
+  "List Mandals available in the user's issue view",
+  page(object({ id: integer, name: string, canCreateIssue: boolean })),
   null,
   { page: true },
 );
@@ -627,6 +629,7 @@ operation(
     title: string,
     description: string,
     locationOrMandalName: string,
+    pincode: { type: "string", pattern: "^[0-9]{6}$", readOnly: true },
     occurrenceDate: timestamp,
     creator: ref("Person"),
     mandal: object({ id: integer, name: string }),

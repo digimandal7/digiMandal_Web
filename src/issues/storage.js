@@ -16,7 +16,7 @@ function metadata(upload) {
   };
 }
 async function upload(userId, mandalId, purpose, file) {
-  await policy.membership(repo.prisma, mandalId, userId);
+  await policy.uploadAccess(repo.prisma, mandalId, userId);
   if (!["ISSUE", "COMMENT", "RESOLUTION"].includes(purpose))
     invalid("purpose", "Use ISSUE, COMMENT or RESOLUTION");
   if (!file || file.size > 5 * 1024 * 1024)
@@ -51,7 +51,7 @@ async function upload(userId, mandalId, purpose, file) {
   });
   try {
     return await repo.transaction(async (db) => {
-      await policy.membership(db, mandalId, userId);
+      await policy.uploadAccess(db, mandalId, userId);
       const row = await db.issueUpload.create({
         data: {
           id,
@@ -132,23 +132,22 @@ async function accessible(db, userId, id) {
     },
   });
   if (!row) fail(404, "NOT_FOUND", "Resource not found");
-  await policy.membership(db, row.mandalId, userId);
   const issueId =
     row.issueAttachment?.issueId ||
     row.commentAttachment?.comment.issueId ||
     row.resolutionAttachment?.resolution.issueId;
   if (row.state === "ATTACHED" && issueId)
     await policy.issueAccess(db, issueId, userId);
-  else if (
-    row.state !== "READY" ||
-    row.ownerId !== userId ||
-    row.expiresAt <= new Date()
-  )
+  else if (row.state === "READY") {
+    await policy.uploadAccess(db, row.mandalId, userId);
+    if (row.ownerId !== userId || row.expiresAt <= new Date())
+      fail(404, "NOT_FOUND", "Resource not found");
+  } else if (row.state !== "READY" || !issueId)
     fail(404, "NOT_FOUND", "Resource not found");
   return row;
 }
 async function content(userId, id, thumbnail) {
-  // Never expose provider URLs. Proxy private content after a fresh membership check.
+  // Never expose provider URLs. Proxy private content after a fresh access check.
   const row = await repo.transaction((db) => accessible(db, userId, id));
   const url = provider().url({
     path: row.filePath,

@@ -46,6 +46,7 @@ function dto(row, member, approver = false) {
     description: row.description,
     shortDescription: row.description.slice(0, 240),
     locationOrMandalName: row.locationOrMandalName,
+    pincode: row.pincode,
     status: row.status,
     occurrenceDate: row.occurrenceDate,
     publishedAt: row.publishedAt,
@@ -81,7 +82,11 @@ async function detail(db, userId, issueId) {
     where: { id: issueId },
     include: repo.include(userId, true),
   });
-  const result = dto(row, member, await isApprover(db, issueId, member.id));
+  const result = dto(
+    row,
+    member,
+    member ? await isApprover(db, issueId, member.id) : false,
+  );
   const preview = await db.issueSupporter.findMany({
     where: { issueId },
     include: { user: { select: repo.user } },
@@ -150,6 +155,7 @@ async function create(userId, mandalId, body, key) {
     publicationHash = hash(input);
   return repo.transaction(async (db) => {
     const member = await policy.membership(db, mandalId, userId);
+    const creator = await policy.viewer(db, userId);
     const old = await db.issue.findUnique({
       where: {
         mandalId_createdByUserId_publicationKey: {
@@ -175,6 +181,7 @@ async function create(userId, mandalId, body, key) {
         ...data,
         mandalId: member.mandalId,
         createdByUserId: userId,
+        pincode: creator.pincode,
         publicationKey,
         publicationHash,
       },
@@ -206,10 +213,11 @@ async function list(userId, query) {
     query.mandalId === undefined ? undefined : v.id(query.mandalId, "mandalId");
   const search = query.search ? v.text(query.search, "search", 200) : undefined;
   return repo.transaction(async (db) => {
-    if (mandalId) await policy.membership(db, mandalId, userId);
+    const currentUser = await policy.viewer(db, userId);
     const { rows, total } = await repo.list(
       db,
       userId,
+      currentUser.pincode,
       { mandalId, status, sort, search },
       p,
     );
@@ -470,7 +478,8 @@ async function resolve(userId, issueId, body, key) {
       true,
     );
     const allowed =
-      policy.isAdmin(member) || (await isApprover(db, issueId, member.id));
+      policy.isAdmin(member) ||
+      Boolean(member && (await isApprover(db, issueId, member.id)));
     if (!allowed)
       v.fail(
         403,
@@ -571,6 +580,7 @@ async function preview(userId, mandalId, body) {
   const input = v.issue(body);
   return repo.transaction(async (db) => {
     const member = await policy.membership(db, mandalId, userId);
+    const currentUser = await policy.viewer(db, userId);
     const selected = await policy.selected(
       db,
       mandalId,
@@ -601,6 +611,7 @@ async function preview(userId, mandalId, body) {
       description: input.description,
       locationOrMandalName: input.locationOrMandalName,
       occurrenceDate: input.occurrenceDate,
+      pincode: currentUser.pincode,
       creator: person(creator),
       mandal: { id: member.mandal.id, name: member.mandal.name },
       participants: input.participants.map((p) => ({
@@ -616,17 +627,45 @@ async function preview(userId, mandalId, body) {
 async function mandals(userId, query) {
   const p = v.paging(query);
   return repo.transaction(async (db) => {
-    const where = { userId, isActive: true };
-    const rows = await db.mandalMember.findMany({
-      where,
-      include: { mandal: { select: { id: true, name: true } } },
-      orderBy: { mandalId: "asc" },
+    const currentUser = await policy.viewer(db, userId);
+    const rows = await db.mandal.findMany({
+      where: {
+        OR: [
+          { members: { some: { userId, isActive: true } } },
+          {
+            issues: {
+              some: { pincode: currentUser.pincode, archivedAt: null },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        members: {
+          where: { userId, isActive: true },
+          select: { id: true },
+          take: 1,
+        },
+      },
+      orderBy: { id: "asc" },
       skip: p.skip,
       take: p.limit,
     });
+    const where = {
+      OR: [
+        { members: { some: { userId, isActive: true } } },
+        {
+          issues: { some: { pincode: currentUser.pincode, archivedAt: null } },
+        },
+      ],
+    };
     return pageResult(
-      rows.map((m) => m.mandal),
-      await db.mandalMember.count({ where }),
+      rows.map(({ members, ...mandal }) => ({
+        ...mandal,
+        canCreateIssue: members.length > 0,
+      })),
+      await db.mandal.count({ where }),
       p,
     );
   });

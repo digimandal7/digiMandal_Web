@@ -58,10 +58,10 @@ async function transaction(work) {
     }
   }
 }
-async function list(db, userId, query, page) {
+async function list(db, userId, pincode, query, page) {
   const search = query.search?.replace(/[\\%_]/g, "\\$&");
   const where = {
-    ...scope(userId),
+    ...scope(pincode),
     ...(query.mandalId ? { mandalId: query.mandalId } : {}),
     ...(query.status !== "ALL" ? { status: query.status } : {}),
     ...(query.search
@@ -79,7 +79,7 @@ async function list(db, userId, query, page) {
     const ids = await db.$queryRaw(Prisma.sql`
       SELECT i.id FROM Issue i
       LEFT JOIN (SELECT issueId, MAX(createdAt) lastActivity FROM IssueActivity WHERE userId = ${userId} GROUP BY issueId) a ON a.issueId = i.id
-      WHERE i.archivedAt IS NULL AND EXISTS (SELECT 1 FROM MandalMember m WHERE m.mandalId = i.mandalId AND m.userId = ${userId} AND m.isActive = true)
+      WHERE i.archivedAt IS NULL AND i.pincode = ${pincode}
       ${query.mandalId ? Prisma.sql`AND i.mandalId = ${query.mandalId}` : Prisma.empty}
       ${query.status !== "ALL" ? Prisma.sql`AND i.status = ${query.status}` : Prisma.empty}
       ${query.search ? Prisma.sql`AND (i.title LIKE ${`%${search}%`} OR i.description LIKE ${`%${search}%`})` : Prisma.empty}

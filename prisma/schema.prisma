@@ -86,6 +86,7 @@ model User {
 
   @@index([mobile])
   @@index([email])
+  @@index([pincode])
   @@index([createdAt])
 }
 
@@ -531,6 +532,7 @@ model Issue {
   title                String             @db.VarChar(200)
   description          String             @db.Text
   locationOrMandalName String             @db.VarChar(255)
+  pincode              String             @db.VarChar(10)
   occurrenceDate       DateTime
   publishedAt          DateTime           @default(now())
   status               IssueStatus        @default(PENDING)
@@ -553,6 +555,7 @@ model Issue {
   @@unique([mandalId, createdByUserId, publicationKey])
   @@index([mandalId, archivedAt, status, publishedAt, id])
   @@index([mandalId, archivedAt, publishedAt, id])
+  @@index([pincode, archivedAt, status, publishedAt, id])
   @@index([createdByUserId, publishedAt])
 }
 

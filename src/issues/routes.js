@@ -153,7 +153,7 @@ router.post(
   (req, res, next) => {
     // Authorize before buffering multipart data.
     require("./policy")
-      .membership(require("./repository").prisma, mid(req), uid(req))
+      .uploadAccess(require("./repository").prisma, mid(req), uid(req))
       .then(() => next(), next);
   },
   upload.single("file"),

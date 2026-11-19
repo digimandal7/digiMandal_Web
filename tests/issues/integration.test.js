@@ -38,16 +38,17 @@ test("issue API: real MySQL transactions, all routes, tenancy, permissions, uplo
   imagekit.deleteFile = async () => ({});
   imagekit.url = () => "data:image/png;base64," + png.toString("base64");
   try {
-    for (let n = 0; n < 5; n++)
+    for (let n = 0; n < 6; n++)
       users.push(
         await prisma.user.create({
           data: {
             mobile: String(7000000000 + Math.floor(Math.random() * 999999999)),
             name: `Issue fixture ${n}`,
+            pincode: n === 3 ? "400001" : "411001",
           },
         }),
       );
-    const [admin, member, peer, outsider, inactive] = users;
+    const [admin, member, peer, outsider, inactive, localViewer] = users;
     for (const owner of [admin, outsider])
       mandals.push(
         await prisma.mandal.create({
@@ -318,7 +319,6 @@ test("issue API: real MySQL transactions, all routes, tenancy, permissions, uplo
           [`/issues/${issue.id}/resolution`, "GET"],
           [`/mandals/${a.id}/members`, "GET"],
           [`/mandals/${a.id}/issues`, "POST", body],
-          [`/issues?mandalId=${a.id}`, "GET"],
           [`/issue-uploads/${body.uploadIds[0]}`, "DELETE"],
         ];
         for (const [path, method, payload] of routes) {
@@ -333,8 +333,16 @@ test("issue API: real MySQL transactions, all routes, tenancy, permissions, uplo
         }
         expectStatus(
           await call(`/issues/${issue.id}`, "GET", undefined, inactive),
-          404,
+          200,
         );
+        const crossPincodeList = await call(
+          `/issues?mandalId=${a.id}`,
+          "GET",
+          undefined,
+          outsider,
+        );
+        expectStatus(crossPincodeList, 200);
+        assert.equal(crossPincodeList.data.items.length, 0);
         expectStatus(await upload("ISSUE", outsider, a), 404);
         const listed = await call("/issues", "GET", undefined, member);
         assert.ok(listed.data.items.every((r) => r.mandalId === a.id));
@@ -344,12 +352,98 @@ test("issue API: real MySQL transactions, all routes, tenancy, permissions, uplo
         });
         expectStatus(
           await call(`/issues/${issue.id}`, "GET", undefined, admin),
-          404,
+          200,
         );
         await prisma.mandalMember.update({
           where: { id: adminMembership.id },
           data: { isActive: true },
         });
+      },
+    );
+    await t.test(
+      "same-pincode users can view, support and comment without Mandal membership",
+      async () => {
+        const details = await call(
+          `/issues/${issue.id}`,
+          "GET",
+          undefined,
+          localViewer,
+        );
+        expectStatus(details, 200);
+        assert.equal(details.data.pincode, "411001");
+        assert.equal(details.data.permissions.canEdit, false);
+        assert.equal(details.data.permissions.canResolve, false);
+        assert.equal(details.data.permissions.canDelete, false);
+        const resolutionUpload = await uploadId("RESOLUTION", localViewer, a);
+        expectStatus(
+          await call(
+            `/issues/${issue.id}/support`,
+            "POST",
+            undefined,
+            localViewer,
+          ),
+          200,
+        );
+        const commentUpload = await uploadId("COMMENT", localViewer, a);
+        const comment = await call(
+          `/issues/${issue.id}/comments`,
+          "POST",
+          { text: "Local resident comment", uploadIds: [commentUpload] },
+          localViewer,
+        );
+        expectStatus(comment, 201);
+        expectStatus(
+          await call(
+            `/issues/${issue.id}/comments/${comment.data.id}`,
+            "DELETE",
+            undefined,
+            localViewer,
+          ),
+          200,
+        );
+        expectStatus(
+          await call(
+            `/issues/${issue.id}/support`,
+            "DELETE",
+            undefined,
+            localViewer,
+          ),
+          200,
+        );
+        expectStatus(
+          await call(
+            `/issues/${issue.id}`,
+            "PATCH",
+            { title: "Not allowed" },
+            localViewer,
+          ),
+          403,
+        );
+        expectStatus(
+          await call(
+            `/issues/${issue.id}/resolve`,
+            "POST",
+            {
+              resolutionDate: "2026-02-01",
+              description: "Not allowed",
+              memberIds: [memberMembership.id],
+              uploadIds: [resolutionUpload],
+            },
+            localViewer,
+            "local-resolve",
+          ),
+          403,
+        );
+        const visibleMandals = await call(
+          "/issues/mandals",
+          "GET",
+          undefined,
+          localViewer,
+        );
+        expectStatus(visibleMandals, 200);
+        assert.deepEqual(visibleMandals.data.items, [
+          { id: a.id, name: a.name, canCreateIssue: false },
+        ]);
       },
     );
     await t.test(

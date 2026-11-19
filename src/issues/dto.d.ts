@@ -68,6 +68,7 @@ export interface IssueCard {
   description: string;
   shortDescription: string;
   locationOrMandalName: string;
+  pincode: string;
   status: IssueStatus;
   occurrenceDate: string;
   publishedAt: string;

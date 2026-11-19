@@ -7,6 +7,10 @@ test("strict DTOs reject tenancy overrides, arbitrary URLs and invalid dates", (
     () => v.issue({ mandalId: 2 }),
     (e) => Boolean(e.details.mandalId),
   );
+  assert.throws(
+    () => v.issue({ pincode: "411001" }),
+    (e) => Boolean(e.details.pincode),
+  );
   assert.throws(() => v.uploads(["https://example.com/image.png"]));
   assert.throws(() => v.date("2026-02-30", "date"));
   assert.throws(() => v.date("2026-01-01T12:00:00", "date"));
@@ -41,6 +45,26 @@ test("only scoped admin permissions confer administrative authority", () => {
   assert.equal(
     policy.isAdmin({ ...member, roleRef: { mandalId: 2, permissions: ["*"] } }),
     true,
+  );
+  assert.equal(policy.isAdmin(null), false);
+  assert.deepEqual(policy.permissions(issue, null), {
+    canEdit: false,
+    canResolve: false,
+    canDelete: false,
+    canComment: true,
+    canSupport: true,
+    canDesignateApprovers: false,
+  });
+});
+test("viewer requires a valid registration PIN code", async () => {
+  const db = {
+    user: { findUnique: async () => ({ id: 2, pincode: "411001" }) },
+  };
+  assert.equal((await policy.viewer(db, 2)).pincode, "411001");
+  db.user.findUnique = async () => ({ id: 2, pincode: null });
+  await assert.rejects(
+    policy.viewer(db, 2),
+    (e) => e.code === "PINCODE_REQUIRED",
   );
 });
 test("membership guard fails closed for inactive/missing members including owners", async () => {
