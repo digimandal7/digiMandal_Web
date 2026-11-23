@@ -53,6 +53,7 @@ app.use("/api/interests", interestRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/v1", require("./discover/routes"));
 app.use("/api/v1", require("./home/routes"));
 app.get("/health/live", (req,res) => res.json({ status:"ok" }));
 app.get("/health/ready", async (req,res) => {

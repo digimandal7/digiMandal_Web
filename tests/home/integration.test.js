@@ -9,7 +9,7 @@ test("Home contracts, stable snapshots, privacy and retry-safe writes on MySQL",
   const users=[],mandals=[];
   let server;
   try {
-    for(let i=0;i<3;i++) users.push(await prisma.user.create({ data:{ mobile:String(8000000000+Math.floor(Math.random()*999999999)),name:"Home Test "+i,isVerified:true,city:"HomeTestCity",state:"TestState",platformRole:i===0?"SUPER_ADMIN":"USER" } }));
+    for(let i=0;i<3;i++) users.push(await prisma.user.create({ data:{ mobile:String(8000000000+Math.floor(Math.random()*999999999)),name:"Home Test "+i,isVerified:true,profileComplete:true,city:"HomeTestCity",state:"TestState",platformRole:i===0?"SUPER_ADMIN":"USER" } }));
     const owner=users[0],viewer=users[1],outsider=users[2];
     const m=await prisma.mandal.create({ data:{ name:"Home test public",category:"Cultural",size:"51-200",status:"ACTIVE",createdById:owner.id,
       address:{ create:{ addressLine1:"Test",city:"HomeTestCity",state:"TestState",pincode:"411001" } },
@@ -37,6 +37,21 @@ test("Home contracts, stable snapshots, privacy and retry-safe writes on MySQL",
     assert.equal(first.data.hero.data,null);
     assert.ok(!JSON.stringify(first).includes(owner.mobile));
     assert.ok(!first.data.feed.items.some(p=>[privatePost.id,hidden.id].includes(p.id)));
+    const discover=await call("/discover?type=MANDALS&limit=2");
+    assert.equal(discover.status,200,JSON.stringify(discover));
+    assert.equal(discover.data.selectedType,"MANDALS");
+    assert.ok(discover.data.items.every(p=>p.type==="POSTS" && p.mandal.id===m.id));
+    const grouped=await call("/discover/search?q=Home&type=ALL");
+    assert.equal(grouped.status,200,JSON.stringify(grouped));
+    assert.ok(grouped.data.groups.mandals.items.some(item=>item.id===m.id));
+    assert.ok(grouped.data.groups.people.items.some(item=>item.id===owner.id));
+    assert.ok(!JSON.stringify(grouped).includes(owner.mobile));
+    const mandalSearch=await call("/discover/search?q=Home&type=MANDALS&location=HomeTestCity%2CTestState&sort=A_Z");
+    assert.equal(mandalSearch.status,200,JSON.stringify(mandalSearch));
+    assert.ok(mandalSearch.data.items.some(item=>item.id===m.id));
+    assert.equal((await call("/discover/search?q=Home&type=UNKNOWN")).status,400);
+    assert.ok((await call("/discover/filters")).data.categories.includes("Cultural"));
+    assert.ok((await call("/discover/locations?q=HomeTest")).data.items.some(item=>item.city==="HomeTestCity"));
     const newPost=await makePost();
     const cursor=first.data.feed.nextCursor;
     const second=await call("/home/feed?limit=2&cursor="+encodeURIComponent(cursor));

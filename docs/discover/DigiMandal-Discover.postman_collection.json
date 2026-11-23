@@ -1,0 +1,77 @@
+{
+  "info": {
+    "name": "DigiMandal Discover API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Discover tab",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover?type=MANDALS&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Grouped search",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/search?q=Mitra&type=ALL&limit=3"
+      }
+    },
+    {
+      "name": "All Mandal results",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/search?q=Mitra&type=MANDALS&sort=A_Z&page=1&limit=20"
+      }
+    },
+    {
+      "name": "People results",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/search?q=Priya&type=PEOPLE&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Post results",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/search?q=music&type=POSTS&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Filter values",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/filters"
+      }
+    },
+    {
+      "name": "Location suggestions",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/discover/locations?q=Vasa"
+      }
+    }
+  ]
+}

@@ -1,0 +1,528 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DigiMandal Discover API",
+    "version": "1.0.0",
+    "description": "Dynamic Discover feed and search over existing active Mandals, profiles, public posts and events. Academy and Vendor organization types are derived centrally from Mandal categories until dedicated organization types are introduced."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1"
+    }
+  ],
+  "paths": {
+    "/discover": {
+      "get": {
+        "summary": "Load Discover tab",
+        "description": "Returns Mandals/Academies/Vendors tabs, selected location, optional live-event hero and paginated post cards.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "MANDALS",
+                "PEOPLE",
+                "POSTS",
+                "ACADEMIES",
+                "VENDORS"
+              ]
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "Thane, Maharashtra"
+            }
+          },
+          {
+            "name": "useCurrentLocation",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RELEVANCE",
+                "A_Z",
+                "Z_A",
+                "NEAREST",
+                "LATEST"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/discover/search": {
+      "get": {
+        "summary": "Search Discover",
+        "description": "type=ALL returns grouped previews. A specific type returns one paginated result list. Blocked, private and moderated resources are excluded.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Required for search endpoints"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "MANDALS",
+                "PEOPLE",
+                "POSTS",
+                "ACADEMIES",
+                "VENDORS"
+              ]
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "Thane, Maharashtra"
+            }
+          },
+          {
+            "name": "useCurrentLocation",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RELEVANCE",
+                "A_Z",
+                "Z_A",
+                "NEAREST",
+                "LATEST"
+              ]
+            }
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated exact category names returned by /discover/filters"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/discover/filters": {
+      "get": {
+        "summary": "Load Discover filter values",
+        "description": "Returns current location, supported sort values and categories derived from visible database content.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/discover/locations": {
+      "get": {
+        "summary": "Autocomplete Discover locations",
+        "description": "Returns up to 10 distinct city/state suggestions from visible Mandal address data.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Required for search endpoints"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Success": {
+        "type": "object",
+        "required": [
+          "success",
+          "data",
+          "requestId",
+          "serverTime"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "success",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

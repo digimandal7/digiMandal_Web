@@ -2,8 +2,11 @@ module.exports = [
   {
     files: [
       "src/issues/**/*.js",
+      "src/discover/**/*.js",
       "tests/issues/**/*.js",
+      "tests/discover/**/*.js",
       "scripts/issues-*.js",
+      "scripts/discover-*.js",
     ],
     languageOptions: {
       ecmaVersion: 2022,
