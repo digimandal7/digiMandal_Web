@@ -50,6 +50,19 @@ exports.createMandal = async (req, res, next) => {
           data: { mandalId: created.id, name: roleName, description: roleName === "Admin" ? "Full Mandal access" : `${roleName} role`, permissions, isSystem: true },
         });
       }
+      const { MEMBER_DESIGNATIONS } = require("../config/mandal-options");
+      for (const designation of MEMBER_DESIGNATIONS) {
+        if (roles[designation]) continue;
+        roles[designation] = await tx.mandalRole.create({
+          data: {
+            mandalId: created.id,
+            name: designation,
+            description: `${designation} role`,
+            permissions: DEFAULT_ROLES.Member,
+            isSystem: false,
+          },
+        });
+      }
       await tx.mandalMember.create({
         data: { mandalId: created.id, userId: req.user.userId, mobile: req.user.mobile, role: "Admin", roleId: roles.Admin.id },
       });
